@@ -774,3 +774,331 @@ img {
 .work-card:nth-child(4) { animation-delay: 0.2s; }
 .work-card:nth-child(5) { animation-delay: 0.25s; }
 .work-card:nth-child(6) { animation-delay: 0.3s; }
+
+/* ===== 炫酷首页动画 ===== */
+
+/* 粒子画布背景 */
+#particle-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* 炫酷 Hero 区域 */
+.hero-fancy {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 64px);
+    padding: 60px 24px;
+    text-align: center;
+    background: #0a0a1a;
+    overflow: hidden;
+}
+
+.hero-fancy::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(79,70,229,0.15) 0%, rgba(6,182,212,0.08) 40%, transparent 70%);
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    animation: pulseGlow 4s ease-in-out infinite;
+    z-index: 1;
+    pointer-events: none;
+}
+
+@keyframes pulseGlow {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+    50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.9; }
+}
+
+.hero-fancy-content {
+    position: relative;
+    z-index: 2;
+    max-width: 720px;
+}
+
+/* 3D 浮动 Logo */
+.hero-logo {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4f46e5, #06b6d4, #a855f7);
+    background-size: 200% 200%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3.5rem;
+    color: white;
+    margin: 0 auto 32px;
+    box-shadow: 0 0 40px rgba(79,70,229,0.4), 0 0 80px rgba(6,182,212,0.2);
+    animation: floatLogo 3s ease-in-out infinite, gradientShift 3s ease infinite;
+    transform-style: preserve-3d;
+    perspective: 1000px;
+}
+
+@keyframes floatLogo {
+    0%, 100% { transform: translateY(0) rotateX(0deg); }
+    50% { transform: translateY(-12px) rotateX(5deg); }
+}
+
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* 发光文字 */
+.hero-fancy-title {
+    font-size: 3.5rem;
+    font-weight: 900;
+    margin-bottom: 20px;
+    background: linear-gradient(90deg, #4f46e5, #06b6d4, #a855f7, #4f46e5);
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmerText 3s linear infinite, slideDown 0.8s ease-out both;
+    letter-spacing: -1px;
+    line-height: 1.1;
+}
+
+@keyframes shimmerText {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 300% 50%; }
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-40px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 副标题 */
+.hero-fancy-subtitle {
+    font-size: 1.2rem;
+    color: #94a3b8;
+    margin-bottom: 40px;
+    line-height: 1.8;
+    animation: fadeInUp 0.8s ease-out 0.2s both;
+    max-width: 560px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 统计数字卡片 */
+.hero-fancy-stats {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin-bottom: 48px;
+    animation: fadeInUp 0.8s ease-out 0.4s both;
+}
+
+.stat-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 24px 32px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+    transition: left 0.5s ease;
+}
+
+.stat-card:hover::before {
+    left: 100%;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(79,70,229,0.3);
+    box-shadow: 0 8px 32px rgba(79,70,229,0.15);
+}
+
+.stat-card-number {
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #4f46e5, #06b6d4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: countPulse 2s ease-in-out infinite;
+}
+
+@keyframes countPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.stat-card-label {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+/* 炫酷按钮 */
+.btn-fancy {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 32px;
+    border-radius: 50px;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    animation: fadeInUp 0.8s ease-out 0.6s both;
+    z-index: 1;
+}
+
+.btn-fancy-primary {
+    background: linear-gradient(135deg, #4f46e5, #06b6d4);
+    color: white;
+    box-shadow: 0 0 20px rgba(79,70,229,0.3);
+}
+
+.btn-fancy-primary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s ease;
+    z-index: -1;
+}
+
+.btn-fancy-primary:hover::before {
+    left: 100%;
+}
+
+.btn-fancy-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0 40px rgba(79,70,229,0.5), 0 8px 24px rgba(79,70,229,0.2);
+}
+
+.btn-fancy-secondary {
+    background: transparent;
+    color: #e2e8f0;
+    border: 2px solid rgba(255,255,255,0.15);
+    margin-left: 16px;
+    backdrop-filter: blur(10px);
+}
+
+.btn-fancy-secondary:hover {
+    border-color: rgba(79,70,229,0.5);
+    background: rgba(79,70,229,0.1);
+    transform: translateY(-3px);
+    box-shadow: 0 0 30px rgba(79,70,229,0.15);
+}
+
+/* 鼠标跟随光晕 */
+#cursor-glow {
+    position: fixed;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(79,70,229,0.12) 0%, rgba(6,182,212,0.05) 40%, transparent 70%);
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: opacity 0.3s ease;
+    opacity: 0;
+}
+
+/* 滚动提示 */
+.scroll-hint {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #64748b;
+    font-size: 0.8rem;
+    animation: bounce 2s infinite;
+    z-index: 2;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+    40% { transform: translateX(-50%) translateY(-10px); }
+    60% { transform: translateX(-50%) translateY(-5px); }
+}
+
+/* 入场动画序列 */
+.hero-fancy .hero-logo { animation-delay: 0s; }
+.hero-fancy .hero-fancy-title { animation-delay: 0.1s; }
+.hero-fancy .hero-fancy-subtitle { animation-delay: 0.2s; }
+.hero-fancy .hero-fancy-stats { animation-delay: 0.3s; }
+.hero-fancy .btn-fancy { animation-delay: 0.4s; }
+
+/* 响应式 */
+@media (max-width: 768px) {
+    .hero-fancy-title {
+        font-size: 2.2rem;
+    }
+    
+    .hero-fancy-subtitle {
+        font-size: 1rem;
+    }
+    
+    .hero-fancy-stats {
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+    
+    .stat-card {
+        padding: 16px 24px;
+        min-width: 120px;
+    }
+    
+    .stat-card-number {
+        font-size: 2rem;
+    }
+    
+    .hero-logo {
+        width: 100px;
+        height: 100px;
+        font-size: 2.5rem;
+    }
+    
+    .btn-fancy-secondary {
+        margin-left: 0;
+        margin-top: 12px;
+    }
+    
+    .btn-fancy-group {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+}

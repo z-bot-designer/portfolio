@@ -131,35 +131,167 @@ function renderHome() {
     const categories = [...new Set(works.map(w => w.category))];
     
     app.innerHTML = `
-        <section class="hero">
-            <div class="hero-content">
-                <div class="hero-avatar">我</div>
-                <h1 class="hero-title">创作者作品集</h1>
-                <p class="hero-subtitle">
+        <section class="hero-fancy">
+            <canvas id="particle-canvas"></canvas>
+            <div class="hero-fancy-content">
+                <div class="hero-logo">我</div>
+                <h1 class="hero-fancy-title">创作者作品集</h1>
+                <p class="hero-fancy-subtitle">
                     这里记录着我的创作历程与灵感瞬间。<br>
                     摄影、设计、插画 — 用作品讲述故事。
                 </p>
-                <div class="hero-stats">
-                    <div class="stat-item">
-                        <div class="stat-number">${works.length}</div>
-                        <div class="stat-label">作品数量</div>
+                <div class="hero-fancy-stats">
+                    <div class="stat-card">
+                        <div class="stat-card-number" id="stat-count">${works.length}</div>
+                        <div class="stat-card-label">作品数量</div>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-number">${categories.length}</div>
-                        <div class="stat-label">创作类别</div>
+                    <div class="stat-card">
+                        <div class="stat-card-number" id="stat-cats">${categories.length}</div>
+                        <div class="stat-card-label">创作类别</div>
                     </div>
                 </div>
-                <div class="hero-buttons">
-                    <button class="btn btn-primary" onclick="renderPage('portfolio')">
-                        浏览作品 →
+                <div class="btn-fancy-group">
+                    <button class="btn-fancy btn-fancy-primary" onclick="renderPage('portfolio')">
+                        浏览作品 <span style="font-size:1.2rem">&#8594;</span>
                     </button>
-                    <button class="btn btn-secondary" onclick="renderPage('upload')">
+                    <button class="btn-fancy btn-fancy-secondary" onclick="renderPage('upload')">
                         上传作品
                     </button>
                 </div>
             </div>
+            <div class="scroll-hint">&#8595; 向下探索</div>
         </section>
     `;
+    
+    // 初始化粒子动画
+    initParticles();
+    // 初始化计数器动画
+    initCountAnimation();
+}
+
+// 粒子动画
+function initParticles() {
+    const canvas = document.getElementById('particle-canvas');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    let animationId = null;
+    const PARTICLE_COUNT = 60;
+    const CONNECTION_DIST = 150;
+    
+    function resize() {
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+    
+    class Particle {
+        constructor() {
+            this.reset();
+        }
+        
+        reset() {
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.vx = (Math.random() - 0.5) * 0.5;
+            this.vy = (Math.random() - 0.5) * 0.5;
+            this.radius = Math.random() * 2 + 1;
+            this.opacity = Math.random() * 0.5 + 0.2;
+        }
+        
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            
+            if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+            if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+        }
+        
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = \`rgba(79, 70, 229, \${this.opacity})\`;
+            ctx.fill();
+        }
+    }
+    
+    function drawConnections() {
+        for (let i = 0; i < particles.length; i++) {
+            for (let j = i + 1; j < particles.length; j++) {
+                const dx = particles[i].x - particles[j].x;
+                const dy = particles[i].y - particles[j].y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist < CONNECTION_DIST) {
+                    const opacity = (1 - dist / CONNECTION_DIST) * 0.2;
+                    ctx.beginPath();
+                    ctx.moveTo(particles[i].x, particles[i].y);
+                    ctx.lineTo(particles[j].x, particles[j].y);
+                    ctx.strokeStyle = \`rgba(79, 70, 229, \${opacity})\`;
+                    ctx.lineWidth = 0.5;
+                    ctx.stroke();
+                }
+            }
+        }
+    }
+    
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        particles.forEach(p => {
+            p.update();
+            p.draw();
+        });
+        
+        drawConnections();
+        animationId = requestAnimationFrame(animate);
+    }
+    
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+        particles.push(new Particle());
+    }
+    
+    animate();
+    
+    // 页面切换时清理动画
+    window.__particleAnimation = animationId;
+}
+
+// 计数器动画
+function initCountAnimation() {
+    const countEl = document.getElementById('stat-count');
+    const catsEl = document.getElementById('stat-cats');
+    if (!countEl || !catsEl) return;
+    
+    const targetCount = parseInt(countEl.textContent) || 0;
+    const targetCats = parseInt(catsEl.textContent) || 0;
+    
+    animateValue(countEl, 0, targetCount, 1200);
+    animateValue(catsEl, 0, targetCats, 1200, 300);
+}
+
+function animateValue(el, start, end, duration, delay) {
+    delay = delay || 0;
+    const startTime = performance.now() + delay;
+    
+    function update(now) {
+        if (now < startTime) {
+            requestAnimationFrame(update);
+            return;
+        }
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = Math.round(start + (end - start) * eased);
+        
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        }
+    }
+    
+    requestAnimationFrame(update);
 }
 
 // 作品展示页
@@ -466,5 +598,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // ESC 关闭弹窗
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeModal();
+    });
+    
+    // 鼠标跟随光晕效果（仅在首页显示）
+    const cursorGlow = document.createElement('div');
+    cursorGlow.id = 'cursor-glow';
+    document.body.appendChild(cursorGlow);
+    
+    let glowTimeout = null;
+    document.addEventListener('mousemove', (e) => {
+        cursorGlow.style.left = e.clientX + 'px';
+        cursorGlow.style.top = e.clientY + 'px';
+        cursorGlow.style.opacity = currentPage === 'home' ? '1' : '0';
+        
+        clearTimeout(glowTimeout);
+        glowTimeout = setTimeout(() => {
+            cursorGlow.style.opacity = '0';
+        }, 100);
     });
 });
