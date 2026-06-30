@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>组织管理</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: #f5f7fa; color: #333; height: 100vh; overflow: hidden;
+        }
+
+        /* 顶部导航 */
+        .header {
+            height: 56px; background: #fff; border-bottom: 1px solid #e8e8e8;
+            display: flex; align-items: center; padding: 0 24px; justify-content: space-between;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .header-left h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
+        .nav-tabs { display: flex; gap: 4px; margin-left: 32px; }
+        .nav-tab {
+            padding: 8px 20px; border-radius: 6px; font-size: 14px; cursor: pointer;
+            border: none; background: transparent; color: #666; transition: all 0.2s;
+            text-decoration: none; display: flex; align-items: center; gap: 6px;
+        }
+        .nav-tab:hover { background: #f5f7fa; color: #1890ff; }
+        .nav-tab.active { background: #e6f7ff; color: #1890ff; font-weight: 500; }
+
+        /* 主体 */
+        .main-container { display: flex; height: calc(100vh - 56px); }
+
+        /* 左侧组织树 */
+        .sidebar {
+            width: 360px; background: #fff; border-right: 1px solid #e8e8e8;
+            display: flex; flex-direction: column; flex-shrink: 0;
+        }
+        .sidebar-header { padding: 16px; border-bottom: 1px solid #f0f0f0; }
+        .sidebar-title {
+            display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
+        }
+        .sidebar-title h3 { font-size: 15px; font-weight: 600; color: #333; }
+        .sidebar-actions { display: flex; gap: 4px; }
+        .icon-btn {
+            width: 32px; height: 32px; border: none; background: transparent; border-radius: 6px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            color: #666; transition: all 0.2s; font-size: 13px;
+        }
+        .icon-btn:hover { background: #f0f0f0; color: #1890ff; }
+        .icon-btn.primary { background: #1890ff; color: #fff; }
+        .icon-btn.primary:hover { background: #40a9ff; }
+        .search-box { position: relative; }
+        .search-box input {
+            width: 100%; padding: 8px 12px 8px 32px; border: 1px solid #d9d9d9;
+            border-radius: 6px; font-size: 13px; outline: none; transition: all 0.2s;
+        }
+        .search-box input:focus { border-color: #1890ff; box-shadow: 0 0 0 2px rgba(24,144,255,0.1); }
+        .search-box i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #999; font-size: 12px; }
+        .tree-container { flex: 1; overflow-y: auto; padding: 8px 0; }
+        .tree-container::-webkit-scrollbar { width: 6px; }
+        .tree-container::-webkit-scrollbar-thumb { background: #d9d9d9; border-radius: 3px; }
+
+        /* 树节点 */
+        .tree-node { user-select: none; }
+        .tree-node-content {
+            display: flex; align-items: center; padding: 10px 16px; cursor: pointer;
+            transition: all 0.2s; position: relative; border-radius: 6px; margin: 0 8px;
+        }
+        .tree-node-content:hover { background: #f5f7fa; }
+        .tree-node-content.active { background: #e6f7ff; color: #1890ff; }
+        .tree-node-content.active .node-icon { color: #1890ff; }
+        .tree-node-content.drag-over { background: #d6eaff; border: 1px dashed #1890ff; }
+        .tree-toggle {
+            width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;
+            margin-right: 4px; cursor: pointer; color: #999; font-size: 10px;
+            transition: transform 0.2s; flex-shrink: 0; border-radius: 4px;
+        }
+        .tree-toggle:hover { background: #e8e8e8; }
+        .tree-toggle.expanded { transform: rotate(90deg); }
+        .tree-toggle.leaf { visibility: hidden; }
+        .node-icon { margin-right: 8px; color: #faad14; font-size: 15px; flex-shrink: 0; }
+        .node-icon.department { color: #52c41a; }
+        .node-icon.team { color: #722ed1; }
+        .node-text { font-size: 13px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .node-count {
+            font-size: 11px; color: #999; background: #f5f5f5; padding: 1px 6px;
+            border-radius: 10px; margin-left: 4px; flex-shrink: 0;
+        }
+        .tree-children { padding-left: 12px; }
+        .tree-children { animation: fadeIn 0.2s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 右侧详情面板 */
+        .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 24px; }
+        .content-header { margin-bottom: 20px; }
+        .content-header h2 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+        .content-header p { font-size: 13px; color: #999; }
+
+        .detail-card {
+            background: #fff; border-radius: 12px; padding: 24px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05); flex: 1; overflow-y: auto;
+        }
+        .detail-empty {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100%; color: #999;
+        }
+        .detail-empty i { font-size: 64px; margin-bottom: 16px; color: #d9d9d9; }
+        .detail-empty p { font-size: 14px; }
+
+        .detail-section { margin-bottom: 24px; }
+        .detail-section:last-child { margin-bottom: 0; }
+        .detail-section-title {
+            font-size: 14px; font-weight: 600; color: #333; margin-bottom: 16px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .detail-section-title i { color: #1890ff; font-size: 14px; }
+
+        .detail-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+        }
+        .detail-item {
+            background: #fafafa; border-radius: 8px; padding: 16px;
+        }
+        .detail-label {
+            font-size: 12px; color: #999; margin-bottom: 6px;
+        }
+        .detail-value {
+            font-size: 14px; color: #333; font-weight: 500;
+        }
+        .detail-value.tag {
+            display: inline-flex; align-items: center; padding: 2px 10px;
+            border-radius: 4px; font-size: 12px;
+        }
+        .tag-company { background: #fff2e8; color: #fa541c; }
+        .tag-department { background: #f6ffed; color: #52c41a; }
+        .tag-team { background: #f9f0ff; color: #722ed1; }
+
+        .detail-actions {
+            display: flex; gap: 8px; margin-top: 24px; padding-top: 20px;
+            border-top: 1px solid #f0f0f0;
+        }
+        .btn {
+            padding: 8px 20px; border-radius: 6px; font-size: 13px; cursor: pointer;
+            border: 1px solid #d9d9d9; background: #fff; color: #333;
+            display: flex; align-items: center; gap: 6px; transition: all 0.2s;
+        }
+        .btn:hover { border-color: #1890ff; color: #1890ff; }
+        .btn-primary { background: #1890ff; border-color: #1890ff; color: #fff; }
+        .btn-primary:hover { background: #40a9ff; border-color: #40a9ff; color: #fff; }
+        .btn-danger { background: #ff4d4f; border-color: #ff4d4f; color: #fff; }
+        .btn-danger:hover { background: #ff7875; border-color: #ff7875; color: #fff; }
+
+        /* 子组织列表 */
+        .sub-org-list { display: flex; flex-direction: column; gap: 8px; }
+        .sub-org-item {
+            display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+            background: #fafafa; border-radius: 8px; transition: all 0.2s;
+        }
+        .sub-org-item:hover { background: #f0f0f0; }
+        .sub-org-item i { font-size: 14px; }
+        .sub-org-name { font-size: 13px; flex: 1; }
+        .sub-org-meta { font-size: 12px; color: #999; }
+
+        /* 路径面包屑 */
+        .org-path {
+            display: flex; align-items: center; gap: 6px; font-size: 13px; color: #666; margin-bottom: 16px;
+        }
+        .org-path i { font-size: 10px; color: #999; }
+        .org-path span:last-child { color: #1890ff; font-weight: 500; }
+
+        /* 右键菜单 */
+        .context-menu {
+            position: fixed; background: #fff; border: 1px solid #e8e8e8;
+            border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 4px 0; z-index: 1000; min-width: 170px; display: none;
+        }
+        .context-menu-item {
+            padding: 8px 16px; cursor: pointer; font-size: 13px;
+            display: flex; align-items: center; gap: 8px; transition: background 0.2s;
+        }
+        .context-menu-item:hover { background: #f5f7fa; }
+        .context-menu-item i { width: 16px; text-align: center; color: #666; }
+        .context-menu-divider { height: 1px; background: #f0f0f0; margin: 4px 0; }
+        .context-menu-item.danger { color: #ff4d4f; }
+        .context-menu-item.danger i { color: #ff4d4f; }
+
+        /* 模态框 */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center;
+            z-index: 2000; opacity: 0; visibility: hidden; transition: all 0.3s;
+        }
+        .modal-overlay.show { opacity: 1; visibility: visible; }
+        .modal {
+            background: #fff; border-radius: 12px; width: 520px; max-width: 90vw;
+            max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;
+            transform: scale(0.95); transition: transform 0.3s;
+        }
+        .modal-overlay.show .modal { transform: scale(1); }
+        .modal-header {
+            padding: 20px 24px; border-bottom: 1px solid #f0f0f0;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .modal-header h3 { font-size: 16px; font-weight: 600; }
+        .modal-close {
+            width: 32px; height: 32px; border: none; background: transparent;
+            border-radius: 6px; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; color: #999; transition: all 0.2s;
+        }
+        .modal-close:hover { background: #f5f5f5; color: #333; }
+        .modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
+        .form-group { margin-bottom: 16px; }
+        .form-group:last-child { margin-bottom: 0; }
+        .form-label { display: block; font-size: 13px; font-weight: 500; color: #333; margin-bottom: 6px; }
+        .form-label .required { color: #ff4d4f; margin-left: 2px; }
+        .form-input, .form-select, .form-textarea {
+            width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9;
+            border-radius: 6px; font-size: 13px; outline: none; transition: all 0.2s; font-family: inherit;
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            border-color: #1890ff; box-shadow: 0 0 0 2px rgba(24,144,255,0.1);
+        }
+        .form-textarea { resize: vertical; min-height: 80px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .form-hint { font-size: 12px; color: #999; margin-top: 4px; }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid #f0f0f0; display: flex; justify-content: flex-end; gap: 8px; }
+
+        /* 组织选择器 */
+        .org-selector { position: relative; }
+        .org-selector-trigger {
+            width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 6px;
+            font-size: 13px; cursor: pointer; display: flex; justify-content: space-between;
+            align-items: center; background: #fff;
+        }
+        .org-selector-trigger:hover { border-color: #1890ff; }
+        .org-selector-dropdown {
+            position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px;
+            background: #fff; border: 1px solid #e8e8e8; border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-height: 280px; overflow-y: auto;
+            z-index: 100; display: none;
+        }
+        .org-selector-dropdown.show { display: block; }
+        .org-selector-item {
+            padding: 8px 12px; cursor: pointer; font-size: 13px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .org-selector-item:hover { background: #f5f7fa; }
+        .org-selector-item.selected { background: #e6f7ff; color: #1890ff; }
+
+        /* 拖拽提示 */
+        .drag-hint {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            background: #333; color: #fff; padding: 10px 20px; border-radius: 8px;
+            font-size: 13px; z-index: 3000; opacity: 0; visibility: hidden; transition: all 0.3s;
+        }
+        .drag-hint.show { opacity: 1; visibility: visible; }
+
+        /* 统计 */
+        .stats-bar { display: flex; gap: 16px; margin-bottom: 20px; }
+        .stat-card {
+            background: #fff; border-radius: 10px; padding: 16px 20px; min-width: 120px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 12px;
+        }
+        .stat-icon {
+            width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center;
+            justify-content: center; font-size: 18px;
+        }
+        .stat-icon.blue { background: #e6f7ff; color: #1890ff; }
+        .stat-icon.green { background: #f6ffed; color: #52c41a; }
+        .stat-icon.orange { background: #fff7e6; color: #faad14; }
+        .stat-icon.purple { background: #f9f0ff; color: #722ed1; }
+        .stat-value { font-size: 22px; font-weight: 600; color: #1a1a1a; }
+        .stat-label { font-size: 12px; color: #999; margin-top: 2px; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-left">
+            <i class="fas fa-sitemap" style="color: #1890ff; font-size: 20px;"></i>
+            <h1>组织人员系统</h1>
+            <div class="nav-tabs">
+                <a href="org-management.html" class="nav-tab active">
+                    <i class="fas fa-folder-tree"></i> 组织管理
+                </a>
+                <a href="personnel-management.html" class="nav-tab">
+                    <i class="fas fa-users"></i> 人员管理
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- 左侧组织树 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">
+                    <h3>组织架构</h3>
+                    <div class="sidebar-actions">
+                        <button class="icon-btn primary" title="添加根组织" onclick="showOrgModal()">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button class="icon-btn" title="展开全部" onclick="expandAll()">
+                            <i class="fas fa-expand-alt"></i>
+                        </button>
+                        <button class="icon-btn" title="折叠全部" onclick="collapseAll()">
+                            <i class="fas fa-compress-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="搜索组织名称..." id="orgSearch" oninput="searchOrg(this.value)">
+                </div>
+            </div>
+            <div class="tree-container" id="treeContainer"></div>
+        </aside>
+
+        <!-- 右侧详情 -->
+        <main class="content">
+            <div class="stats-bar" id="statsBar">
+                <div class="stat-card">
+                    <div class="stat-icon blue"><i class="fas fa-building"></i></div>
+                    <div>
+                        <div class="stat-value" id="statTotal">0</div>
+                        <div class="stat-label">组织总数</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green"><i class="fas fa-building"></i></div>
+                    <div>
+                        <div class="stat-value" id="statCompany">0</div>
+                        <div class="stat-label">公司</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange"><i class="fas fa-folder"></i></div>
+                    <div>
+                        <div class="stat-value" id="statDept">0</div>
+                        <div class="stat-label">部门</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple"><i class="fas fa-users"></i></div>
+                    <div>
+                        <div class="stat-value" id="statTeam">0</div>
+                        <div class="stat-label">团队</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-card" id="detailCard">
+                <div class="detail-empty">
+                    <i class="fas fa-mouse-pointer"></i>
+                    <p>请在左侧选择一个组织查看详情</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 右键菜单 -->
+    <div class="context-menu" id="contextMenu">
+        <div class="context-menu-item" onclick="addSubOrg()">
+            <i class="fas fa-plus"></i> 添加子组织
+        </div>
+        <div class="context-menu-item" onclick="editOrg()">
+            <i class="fas fa-edit"></i> 编辑组织
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" onclick="moveOrgUp()">
+            <i class="fas fa-arrow-up"></i> 上移
+        </div>
+        <div class="context-menu-item" onclick="moveOrgDown()">
+            <i class="fas fa-arrow-down"></i> 下移
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item danger" onclick="deleteOrg()">
+            <i class="fas fa-trash-alt"></i> 删除组织
+        </div>
+    </div>
+
+    <!-- 组织模态框 -->
+    <div class="modal-overlay" id="orgModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="orgModalTitle">添加组织</h3>
+                <button class="modal-close" onclick="closeModal('orgModal')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="orgForm">
+                    <input type="hidden" id="orgId">
+                    <input type="hidden" id="orgParentId">
+                    <div class="form-group">
+                        <label class="form-label">组织名称 <span class="required">*</span></label>
+                        <input type="text" class="form-input" id="orgName" placeholder="请输入组织名称" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">上级组织</label>
+                        <div class="org-selector">
+                            <div class="org-selector-trigger" onclick="toggleParentOrgDropdown(event)">
+                                <span id="selectedParentOrgText">无（作为根组织）</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div class="org-selector-dropdown" id="parentOrgDropdown"></div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">组织类型</label>
+                            <select class="form-select" id="orgType">
+                                <option value="company">公司</option>
+                                <option value="department">部门</option>
+                                <option value="team">团队</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">排序号</label>
+                            <input type="number" class="form-input" id="orgSort" value="0" placeholder="数字越小越靠前">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">备注</label>
+                        <textarea class="form-textarea" id="orgRemark" placeholder="请输入备注信息"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('orgModal')">取消</button>
+                <button class="btn btn-primary" onclick="saveOrg()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 拖拽提示 -->
+    <div class="drag-hint" id="dragHint">拖拽到目标组织以调整层级关系</div>
+
+    <script>
+        // ==================== 数据 ====================
+        let orgData = [
+            {
+                id: '1', name: '科技有限公司', type: 'company', parentId: null, sort: 1, remark: '总部',
+                createdAt: '2023-01-15', children: [
+                    {
+                        id: '11', name: '研发中心', type: 'department', parentId: '1', sort: 1, remark: '负责产品研发',
+                        createdAt: '2023-01-20', children: [
+                            { id: '111', name: '前端开发组', type: 'team', parentId: '11', sort: 1, remark: 'Web/App前端', createdAt: '2023-02-01', children: [] },
+                            { id: '112', name: '后端开发组', type: 'team', parentId: '11', sort: 2, remark: '服务端开发', createdAt: '2023-02-01', children: [] },
+                            { id: '113', name: '测试组', type: 'team', parentId: '11', sort: 3, remark: '质量保障', createdAt: '2023-02-01', children: [] }
+                        ]
+                    },
+                    {
+                        id: '12', name: '产品中心', type: 'department', parentId: '1', sort: 2, remark: '产品规划与设计',
+                        createdAt: '2023-01-20', children: [
+                            { id: '121', name: '产品设计组', type: 'team', parentId: '12', sort: 1, remark: 'UI/UX设计', createdAt: '2023-02-10', children: [] },
+                            { id: '122', name: '用户研究组', type: 'team', parentId: '12', sort: 2, remark: '用户调研', createdAt: '2023-02-10', children: [] }
+                        ]
+                    },
+                    {
+                        id: '13', name: '运营中心', type: 'department', parentId: '1', sort: 3, remark: '市场运营',
+                        createdAt: '2023-01-20', children: [
+                            { id: '131', name: '市场推广组', type: 'team', parentId: '13', sort: 1, remark: '品牌推广', createdAt: '2023-02-15', children: [] },
+                            { id: '132', name: '客户服务组', type: 'team', parentId: '13', sort: 2, remark: '客户支持', createdAt: '2023-02-15', children: [] }
+                        ]
+                    },
+                    { id: '14', name: '人力资源部', type: 'department', parentId: '1', sort: 4, remark: '人事管理', createdAt: '2023-01-25', children: [] },
+                    { id: '15', name: '财务部', type: 'department', parentId: '1', sort: 5, remark: '财务管理', createdAt: '2023-01-25', children: [] }
+                ]
+            }
+        ];
+
+        let personData = [
+            { id: 'p1', name: '张三', code: 'EMP001', orgId: '1', position: '总经理', role: 'admin', phone: '13800138001', email: 'zhangsan@company.com', status: 'active', remark: '' },
+            { id: 'p2', name: '李四', code: 'EMP002', orgId: '11', position: '研发总监', role: 'manager', phone: '13800138002', email: 'lisi@company.com', status: 'active', remark: '' },
+            { id: 'p3', name: '王五', code: 'EMP003', orgId: '111', position: '高级前端工程师', role: 'member', phone: '13800138003', email: 'wangwu@company.com', status: 'active', remark: '' },
+            { id: 'p4', name: '赵六', code: 'EMP004', orgId: '111', position: '前端工程师', role: 'member', phone: '13800138004', email: 'zhaoliu@company.com', status: 'active', remark: '' },
+            { id: 'p5', name: '孙七', code: 'EMP005', orgId: '112', position: '后端架构师', role: 'member', phone: '13800138005', email: 'sunqi@company.com', status: 'active', remark: '' },
+            { id: 'p6', name: '周八', code: 'EMP006', orgId: '112', position: '后端工程师', role: 'member', phone: '13800138006', email: 'zhouba@company.com', status: 'leave', remark: '年假' },
+            { id: 'p7', name: '吴九', code: 'EMP007', orgId: '113', position: '测试工程师', role: 'member', phone: '13800138007', email: 'wujiu@company.com', status: 'active', remark: '' },
+            { id: 'p8', name: '郑十', code: 'EMP008', orgId: '12', position: '产品总监', role: 'manager', phone: '13800138008', email: 'zhengshi@company.com', status: 'active', remark: '' },
+            { id: 'p9', name: '钱十一', code: 'EMP009', orgId: '121', position: 'UI设计师', role: 'member', phone: '13800138009', email: 'qian11@company.com', status: 'active', remark: '' },
+            { id: 'p10', name: '冯十二', code: 'EMP010', orgId: '122', position: '用户研究员', role: 'member', phone: '13800138010', email: 'feng12@company.com', status: 'active', remark: '' },
+            { id: 'p11', name: '陈十三', code: 'EMP011', orgId: '13', position: '运营总监', role: 'manager', phone: '13800138011', email: 'chen13@company.com', status: 'active', remark: '' },
+            { id: 'p12', name: '褚十四', code: 'EMP012', orgId: '131', position: '市场专员', role: 'member', phone: '13800138012', email: 'chu14@company.com', status: 'inactive', remark: '已离职' },
+            { id: 'p13', name: '卫十五', code: 'EMP013', orgId: '132', position: '客服主管', role: 'member', phone: '13800138013', email: 'wei15@company.com', status: 'active', remark: '' },
+            { id: 'p14', name: '蒋十六', code: 'EMP014', orgId: '14', position: 'HR经理', role: 'manager', phone: '13800138014', email: 'jiang16@company.com', status: 'active', remark: '' },
+            { id: 'p15', name: '沈十七', code: 'EMP015', orgId: '14', position: '招聘专员', role: 'member', phone: '13800138015', email: 'shen17@company.com', status: 'active', remark: '' },
+            { id: 'p16', name: '韩十八', code: 'EMP016', orgId: '15', position: '财务经理', role: 'manager', phone: '13800138016', email: 'han18@company.com', status: 'active', remark: '' },
+            { id: 'p17', name: '杨十九', code: 'EMP017', orgId: '15', position: '会计', role: 'member', phone: '13800138017', email: 'yang19@company.com', status: 'active', remark: '' },
+            { id: 'p18', name: '朱二十', code: 'EMP018', orgId: '111', position: '前端实习生', role: 'member', phone: '13800138018', email: 'zhu20@company.com', status: 'active', remark: '' },
+            { id: 'p19', name: '秦二十一', code: 'EMP019', orgId: '112', position: '后端工程师', role: 'member', phone: '13800138019', email: 'qin21@company.com', status: 'active', remark: '' },
+            { id: 'p20', name: '尤二十二', code: 'EMP020', orgId: '113', position: '自动化测试', role: 'member', phone: '13800138020', email: 'you22@company.com', status: 'leave', remark: '病假' },
+            { id: 'p21', name: '许二十三', code: 'EMP021', orgId: '121', position: '交互设计师', role: 'member', phone: '13800138021', email: 'xu23@company.com', status: 'active', remark: '' },
+            { id: 'p22', name: '何二十四', code: 'EMP022', orgId: '131', position: '市场经理', role: 'member', phone: '13800138022', email: 'he24@company.com', status: 'active', remark: '' },
+            { id: 'p23', name: '吕二十五', code: 'EMP023', orgId: '132', position: '客服专员', role: 'member', phone: '13800138023', email: 'lv25@company.com', status: 'active', remark: '' },
+            { id: 'p24', name: '施二十六', code: 'EMP024', orgId: '1', position: '行政助理', role: 'member', phone: '13800138024', email: 'shi26@company.com', status: 'active', remark: '' }
+        ];
+
+        // ==================== 状态 ====================
+        let currentOrgId = null;
+        let expandedNodes = new Set(['1', '11', '12', '13']);
+        let contextMenuTarget = null;
+        let editingOrgId = null;
+        let draggedOrgId = null;
+
+        // ==================== 初始化 ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            renderTree();
+            updateStats();
+            document.addEventListener('click', function() {
+                document.getElementById('contextMenu').style.display = 'none';
+                document.getElementById('parentOrgDropdown').classList.remove('show');
+            });
+        });
+
+        // ==================== 组织树渲染 ====================
+        function renderTree() {
+            const container = document.getElementById('treeContainer');
+            container.innerHTML = '';
+            orgData.forEach(org => {
+                container.appendChild(createTreeNode(org, 0));
+            });
+        }
+
+        function createTreeNode(org, level) {
+            const hasChildren = org.children && org.children.length > 0;
+            const isExpanded = expandedNodes.has(org.id);
+            const isActive = currentOrgId === org.id;
+            const count = getOrgPersonCount(org.id);
+
+            const node = document.createElement('div');
+            node.className = 'tree-node';
+            node.dataset.id = org.id;
+            node.draggable = true;
+
+            const content = document.createElement('div');
+            content.className = 'tree-node-content' + (isActive ? ' active' : '');
+            content.style.paddingLeft = (16 + level * 16) + 'px';
+            content.onclick = () => selectOrg(org.id);
+            content.oncontextmenu = (e) => showContextMenu(e, org);
+
+            // 拖拽事件
+            node.addEventListener('dragstart', (e) => {
+                draggedOrgId = org.id;
+                e.dataTransfer.effectAllowed = 'move';
+                document.getElementById('dragHint').classList.add('show');
+            });
+            node.addEventListener('dragend', () => {
+                draggedOrgId = null;
+                document.getElementById('dragHint').classList.remove('show');
+                document.querySelectorAll('.tree-node-content').forEach(el => el.classList.remove('drag-over'));
+            });
+
+            content.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                if (draggedOrgId && draggedOrgId !== org.id) {
+                    content.classList.add('drag-over');
+                }
+            });
+            content.addEventListener('dragleave', () => {
+                content.classList.remove('drag-over');
+            });
+            content.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                content.classList.remove('drag-over');
+                if (draggedOrgId && draggedOrgId !== org.id) {
+                    moveOrgToParent(draggedOrgId, org.id);
+                }
+            });
+
+            const toggle = document.createElement('span');
+            toggle.className = 'tree-toggle' + (hasChildren ? '' : ' leaf') + (isExpanded ? ' expanded' : '');
+            toggle.innerHTML = '<i class="fas fa-chevron-right"></i>';
+            if (hasChildren) {
+                toggle.onclick = (e) => { e.stopPropagation(); toggleNode(org.id); };
+            }
+
+            const iconClass = org.type === 'company' ? '' : (org.type === 'department' ? ' department' : ' team');
+            const icon = org.type === 'company' ? 'fa-building' : (org.type === 'department' ? 'fa-folder' : 'fa-users');
+
+            content.innerHTML = `
+                ${toggle.outerHTML}
+                <i class="fas ${icon} node-icon${iconClass}"></i>
+                <span class="node-text">${org.name}</span>
+                <span class="node-count">${count}人</span>
+            `;
+
+            const toggleEl = content.querySelector('.tree-toggle');
+            if (hasChildren) {
+                toggleEl.onclick = (e) => { e.stopPropagation(); toggleNode(org.id); };
+            }
+
+            node.appendChild(content);
+
+            if (hasChildren && isExpanded) {
+                const children = document.createElement('div');
+                children.className = 'tree-children';
+                org.children.forEach(child => {
+                    children.appendChild(createTreeNode(child, level + 1));
+                });
+                node.appendChild(children);
+            }
+
+            return node;
+        }
+
+        function toggleNode(orgId) {
+            if (expandedNodes.has(orgId)) expandedNodes.delete(orgId);
+            else expandedNodes.add(orgId);
+            renderTree();
+        }
+
+        function expandAll() {
+            function addAll(node) { expandedNodes.add(node.id); if (node.children) node.children.forEach(addAll); }
+            orgData.forEach(addAll);
+            renderTree();
+        }
+
+        function collapseAll() {
+            expandedNodes.clear();
+            renderTree();
+        }
+
+        function selectOrg(orgId) {
+            currentOrgId = orgId;
+            renderTree();
+            renderDetail();
+        }
+
+        // ==================== 详情面板 ====================
+        function renderDetail() {
+            const card = document.getElementById('detailCard');
+            if (!currentOrgId) {
+                card.innerHTML = `
+                    <div class="detail-empty">
+                        <i class="fas fa-mouse-pointer"></i>
+                        <p>请在左侧选择一个组织查看详情</p>
+                    </div>`;
+                return;
+            }
+
+            const org = findOrg(currentOrgId);
+            if (!org) return;
+
+            const path = findOrgPath(currentOrgId);
+            const pathHtml = path ? path.map(o => o.name).join(' <i class="fas fa-chevron-right"></i> ') : '-';
+            const typeMap = { company: { text: '公司', class: 'tag-company' }, department: { text: '部门', class: 'tag-department' }, team: { text: '团队', class: 'tag-team' } };
+            const typeInfo = typeMap[org.type];
+            const count = getOrgPersonCount(org.id);
+            const directCount = personData.filter(p => p.orgId === org.id).length;
+            const subCount = count - directCount;
+
+            // 子组织列表
+            let subOrgHtml = '';
+            if (org.children && org.children.length > 0) {
+                subOrgHtml = `
+                    <div class="detail-section">
+                        <div class="detail-section-title"><i class="fas fa-sitemap"></i> 下级组织 (${org.children.length})</div>
+                        <div class="sub-org-list">
+                            ${org.children.map(child => {
+                                const childType = typeMap[child.type];
+                                const childCount = getOrgPersonCount(child.id);
+                                return `
+                                    <div class="sub-org-item" onclick="selectOrg('${child.id}')" style="cursor:pointer;">
+                                        <i class="fas ${child.type === 'company' ? 'fa-building' : (child.type === 'department' ? 'fa-folder' : 'fa-users')}" style="color: ${child.type === 'company' ? '#faad14' : (child.type === 'department' ? '#52c41a' : '#722ed1')};"></i>
+                                        <span class="sub-org-name">${child.name}</span>
+                                        <span class="sub-org-meta">${childType.text} · ${childCount}人</span>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 人员列表（仅显示直接归属）
+            const directPersons = personData.filter(p => p.orgId === org.id);
+            let personHtml = '';
+            if (directPersons.length > 0) {
+                const statusMap = { active: { text: '在职', color: '#52c41a' }, inactive: { text: '离职', color: '#ff4d4f' }, leave: { text: '休假', color: '#faad14' } };
+                personHtml = `
+                    <div class="detail-section">
+                        <div class="detail-section-title"><i class="fas fa-users"></i> 直属人员 (${directPersons.length})</div>
+                        <div class="sub-org-list">
+                            ${directPersons.map(p => {
+                                const status = statusMap[p.status];
+                                return `
+                                    <div class="sub-org-item">
+                                        <div style="width:28px;height:28px;border-radius:50%;background:#1890ff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;">${p.name.charAt(0)}</div>
+                                        <span class="sub-org-name">${p.name} <span style="color:#999;font-size:12px;">${p.position || '-'}</span></span>
+                                        <span class="sub-org-meta" style="color:${status.color};">${status.text}</span>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            card.innerHTML = `
+                <div class="org-path">${pathHtml}</div>
+                <div class="detail-section">
+                    <div class="detail-section-title"><i class="fas fa-info-circle"></i> 基本信息</div>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">组织名称</div>
+                            <div class="detail-value">${org.name}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">组织类型</div>
+                            <div class="detail-value"><span class="tag ${typeInfo.class}">${typeInfo.text}</span></div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">组织ID</div>
+                            <div class="detail-value">${org.id}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">排序号</div>
+                            <div class="detail-value">${org.sort || 0}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">直属人员</div>
+                            <div class="detail-value">${directCount} 人</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">下属人员（含子组织）</div>
+                            <div class="detail-value">${subCount} 人</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">下级组织数</div>
+                            <div class="detail-value">${org.children ? org.children.length : 0} 个</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">创建时间</div>
+                            <div class="detail-value">${org.createdAt || '-'}</div>
+                        </div>
+                    </div>
+                </div>
+                ${org.remark ? `
+                <div class="detail-section">
+                    <div class="detail-section-title"><i class="fas fa-sticky-note"></i> 备注</div>
+                    <div style="background:#fafafa;border-radius:8px;padding:16px;font-size:13px;color:#666;line-height:1.6;">${org.remark}</div>
+                </div>
+                ` : ''}
+                ${subOrgHtml}
+                ${personHtml}
+                <div class="detail-actions">
+                    <button class="btn btn-primary" onclick="showOrgModal('${org.id}')">
+                        <i class="fas fa-edit"></i> 编辑组织
+                    </button>
+                    <button class="btn" onclick="showOrgModal(null, '${org.id}')">
+                        <i class="fas fa-plus"></i> 添加子组织
+                    </button>
+                    <button class="btn btn-danger" onclick="deleteOrgById('${org.id}')">
+                        <i class="fas fa-trash-alt"></i> 删除组织
+                    </button>
+                </div>
+            `;
+        }
+
+        // ==================== 工具函数 ====================
+        function findOrg(id, nodes) {
+            nodes = nodes || orgData;
+            for (const node of nodes) {
+                if (node.id === id) return node;
+                if (node.children) { const found = findOrg(id, node.children); if (found) return found; }
+            }
+            return null;
+        }
+
+        function findOrgPath(id, nodes, path) {
+            nodes = nodes || orgData; path = path || [];
+            for (const node of nodes) {
+                if (node.id === id) return [...path, node];
+                if (node.children) { const found = findOrgPath(id, node.children, [...path, node]); if (found) return found; }
+            }
+            return null;
+        }
+
+        function getOrgPersonCount(orgId) {
+            const org = findOrg(orgId);
+            if (!org) return 0;
+            let count = personData.filter(p => p.orgId === orgId).length;
+            if (org.children) org.children.forEach(child => { count += getOrgPersonCount(child.id); });
+            return count;
+        }
+
+        function getAllOrgIds(org) {
+            let ids = [org.id];
+            if (org.children) org.children.forEach(child => { ids = ids.concat(getAllOrgIds(child)); });
+            return ids;
+        }
+
+        function countOrgsByType(type) {
+            let count = 0;
+            function walk(nodes) {
+                nodes.forEach(node => {
+                    if (node.type === type) count++;
+                    if (node.children) walk(node.children);
+                });
+            }
+            walk(orgData);
+            return count;
+        }
+
+        function countAllOrgs() {
+            let count = 0;
+            function walk(nodes) {
+                nodes.forEach(node => { count++; if (node.children) walk(node.children); });
+            }
+            walk(orgData);
+            return count;
+        }
+
+        function updateStats() {
+            document.getElementById('statTotal').textContent = countAllOrgs();
+            document.getElementById('statCompany').textContent = countOrgsByType('company');
+            document.getElementById('statDept').textContent = countOrgsByType('department');
+            document.getElementById('statTeam').textContent = countOrgsByType('team');
+        }
+
+        // ==================== 组织CRUD ====================
+        function showOrgModal(parentId, orgId) {
+            editingOrgId = orgId;
+            const modal = document.getElementById('orgModal');
+            const title = document.getElementById('orgModalTitle');
+            const form = document.getElementById('orgForm');
+
+            if (orgId) {
+                const org = findOrg(orgId);
+                if (!org) return;
+                title.textContent = '编辑组织';
+                document.getElementById('orgId').value = org.id;
+                document.getElementById('orgName').value = org.name;
+                document.getElementById('orgType').value = org.type;
+                document.getElementById('orgSort').value = org.sort || 0;
+                document.getElementById('orgRemark').value = org.remark || '';
+                document.getElementById('orgParentId').value = org.parentId || '';
+                if (org.parentId) {
+                    const parent = findOrg(org.parentId);
+                    document.getElementById('selectedParentOrgText').textContent = parent ? parent.name : '无';
+                } else {
+                    document.getElementById('selectedParentOrgText').textContent = '无（作为根组织）';
+                }
+            } else {
+                title.textContent = '添加组织';
+                form.reset();
+                document.getElementById('orgId').value = '';
+                document.getElementById('orgSort').value = '0';
+                editingOrgId = null;
+                if (parentId) {
+                    const parent = findOrg(parentId);
+                    document.getElementById('orgParentId').value = parentId;
+                    document.getElementById('selectedParentOrgText').textContent = parent ? parent.name : '无';
+                } else if (contextMenuTarget) {
+                    document.getElementById('orgParentId').value = contextMenuTarget.id;
+                    document.getElementById('selectedParentOrgText').textContent = contextMenuTarget.name;
+                } else {
+                    document.getElementById('orgParentId').value = '';
+                    document.getElementById('selectedParentOrgText').textContent = '无（作为根组织）';
+                }
+            }
+
+            renderParentOrgDropdown();
+            modal.classList.add('show');
+        }
+
+        function saveOrg() {
+            const name = document.getElementById('orgName').value.trim();
+            const type = document.getElementById('orgType').value;
+            const sort = parseInt(document.getElementById('orgSort').value) || 0;
+            const remark = document.getElementById('orgRemark').value.trim();
+            const parentId = document.getElementById('orgParentId').value || null;
+
+            if (!name) { alert('请输入组织名称'); return; }
+
+            if (editingOrgId) {
+                const existing = findOrg(editingOrgId);
+                if (existing) {
+                    existing.name = name; existing.type = type; existing.sort = sort; existing.remark = remark;
+                    if (existing.parentId !== parentId) {
+                        function removeFromTree(nodes, targetId) {
+                            for (let i = 0; i < nodes.length; i++) {
+                                if (nodes[i].id === targetId) { const node = nodes.splice(i, 1)[0]; return node; }
+                                if (nodes[i].children) { const found = removeFromTree(nodes[i].children, targetId); if (found) return found; }
+                            }
+                            return null;
+                        }
+                        const node = removeFromTree(orgData, editingOrgId);
+                        if (node) {
+                            node.parentId = parentId;
+                            if (parentId) {
+                                const parent = findOrg(parentId);
+                                if (parent) { if (!parent.children) parent.children = []; parent.children.push(node); parent.children.sort((a, b) => (a.sort || 0) - (b.sort || 0)); expandedNodes.add(parentId); }
+                            } else { orgData.push(node); orgData.sort((a, b) => (a.sort || 0) - (b.sort || 0)); }
+                        }
+                    }
+                }
+            } else {
+                const org = { id: 'org' + Date.now(), name, type, parentId, sort, remark, createdAt: new Date().toISOString().split('T')[0], children: [] };
+                if (parentId) {
+                    const parent = findOrg(parentId);
+                    if (parent) { if (!parent.children) parent.children = []; parent.children.push(org); parent.children.sort((a, b) => (a.sort || 0) - (b.sort || 0)); expandedNodes.add(parentId); }
+                } else { orgData.push(org); orgData.sort((a, b) => (a.sort || 0) - (b.sort || 0)); }
+            }
+
+            closeModal('orgModal');
+            renderTree();
+            renderDetail();
+            updateStats();
+        }
+
+        function deleteOrg() {
+            if (!contextMenuTarget) return;
+            deleteOrgById(contextMenuTarget.id);
+            document.getElementById('contextMenu').style.display = 'none';
+        }
+
+        function deleteOrgById(orgId) {
+            const org = findOrg(orgId);
+            if (!org) return;
+            const count = getOrgPersonCount(org.id);
+
+            if (org.children && org.children.length > 0) {
+                alert('该组织下存在子组织，请先删除子组织。'); return;
+            }
+
+            if (count > 0) {
+                if (!confirm(`该组织下有 ${count} 名人员，删除后这些人员将移到根组织，确定继续吗？`)) return;
+                personData.forEach(p => { if (p.orgId === org.id) p.orgId = '1'; });
+            } else {
+                if (!confirm(`确定要删除组织「${org.name}」吗？`)) return;
+            }
+
+            function removeFromTree(nodes, targetId) {
+                for (let i = 0; i < nodes.length; i++) {
+                    if (nodes[i].id === targetId) { nodes.splice(i, 1); return true; }
+                    if (nodes[i].children) { if (removeFromTree(nodes[i].children, targetId)) return true; }
+                }
+                return false;
+            }
+            removeFromTree(orgData, org.id);
+
+            if (currentOrgId === org.id) { currentOrgId = null; }
+            renderTree(); renderDetail(); updateStats();
+        }
+
+        function moveOrgToParent(orgId, newParentId) {
+            if (orgId === newParentId) return;
+            // 防止循环引用
+            const target = findOrg(newParentId);
+            if (target) {
+                const allIds = getAllOrgIds(target);
+                if (allIds.includes(orgId)) { alert('不能将组织移动到其下级组织中'); return; }
+            }
+
+            function removeFromTree(nodes, targetId) {
+                for (let i = 0; i < nodes.length; i++) {
+                    if (nodes[i].id === targetId) { const node = nodes.splice(i, 1)[0]; return node; }
+                    if (nodes[i].children) { const found = removeFromTree(nodes[i].children, targetId); if (found) return found; }
+                }
+                return null;
+            }
+
+            const node = removeFromTree(orgData, orgId);
+            if (node) {
+                node.parentId = newParentId;
+                const parent = findOrg(newParentId);
+                if (parent) { if (!parent.children) parent.children = []; parent.children.push(node); parent.children.sort((a, b) => (a.sort || 0) - (b.sort || 0)); expandedNodes.add(newParentId); }
+                else { orgData.push(node); }
+                renderTree(); renderDetail(); updateStats();
+            }
+        }
+
+        function moveOrgUp() {
+            if (!contextMenuTarget) return;
+            const org = contextMenuTarget;
+            const siblings = org.parentId ? (findOrg(org.parentId).children || []) : orgData;
+            const idx = siblings.findIndex(o => o.id === org.id);
+            if (idx > 0) {
+                [siblings[idx], siblings[idx - 1]] = [siblings[idx - 1], siblings[idx]];
+                siblings[idx].sort = idx; siblings[idx - 1].sort = idx - 1;
+                renderTree(); document.getElementById('contextMenu').style.display = 'none';
+            }
+        }
+
+        function moveOrgDown() {
+            if (!contextMenuTarget) return;
+            const org = contextMenuTarget;
+            const siblings = org.parentId ? (findOrg(org.parentId).children || []) : orgData;
+            const idx = siblings.findIndex(o => o.id === org.id);
+            if (idx < siblings.length - 1) {
+                [siblings[idx], siblings[idx + 1]] = [siblings[idx + 1], siblings[idx]];
+                siblings[idx].sort = idx; siblings[idx + 1].sort = idx + 1;
+                renderTree(); document.getElementById('contextMenu').style.display = 'none';
+            }
+        }
+
+        function addSubOrg() {
+            if (contextMenuTarget) showOrgModal(contextMenuTarget.id);
+            document.getElementById('contextMenu').style.display = 'none';
+        }
+
+        function editOrg() {
+            if (contextMenuTarget) showOrgModal(null, contextMenuTarget.id);
+            document.getElementById('contextMenu').style.display = 'none';
+        }
+
+        // ==================== 右键菜单 ====================
+        function showContextMenu(e, org) {
+            e.preventDefault();
+            contextMenuTarget = org;
+            const menu = document.getElementById('contextMenu');
+            menu.style.display = 'block';
+            menu.style.left = e.clientX + 'px';
+            menu.style.top = e.clientY + 'px';
+            const rect = menu.getBoundingClientRect();
+            if (rect.right > window.innerWidth) menu.style.left = (e.clientX - rect.width) + 'px';
+            if (rect.bottom > window.innerHeight) menu.style.top = (e.clientY - rect.height) + 'px';
+        }
+
+        // ==================== 搜索 ====================
+        function searchOrg(value) {
+            if (!value.trim()) { renderTree(); return; }
+            const searchLower = value.toLowerCase();
+            const matchedIds = new Set();
+            function searchNodes(nodes) {
+                nodes.forEach(node => {
+                    if (node.name.toLowerCase().includes(searchLower)) {
+                        matchedIds.add(node.id);
+                        let parent = findOrg(node.parentId);
+                        while (parent) { expandedNodes.add(parent.id); parent = findOrg(parent.parentId); }
+                    }
+                    if (node.children) searchNodes(node.children);
+                });
+            }
+            searchNodes(orgData);
+            renderTree();
+            document.querySelectorAll('.tree-node-content').forEach(el => {
+                const nodeId = el.closest('.tree-node').dataset.id;
+                el.style.background = matchedIds.has(nodeId) ? '#fff7e6' : '';
+            });
+        }
+
+        // ==================== 组织选择器 ====================
+        function renderParentOrgDropdown() {
+            const dropdown = document.getElementById('parentOrgDropdown');
+            dropdown.innerHTML = '';
+            const noneItem = document.createElement('div');
+            noneItem.className = 'org-selector-item';
+            noneItem.innerHTML = '<i class="fas fa-ban" style="color:#999;"></i> 无（作为根组织）';
+            noneItem.onclick = (e) => { e.stopPropagation(); document.getElementById('orgParentId').value = ''; document.getElementById('selectedParentOrgText').textContent = '无（作为根组织）'; dropdown.classList.remove('show'); };
+            dropdown.appendChild(noneItem);
+
+            function renderOptions(nodes, level) {
+                level = level || 0;
+                nodes.forEach(node => {
+                    if (editingOrgId && node.id === editingOrgId) return;
+                    const item = document.createElement('div');
+                    item.className = 'org-selector-item';
+                    item.style.paddingLeft = (12 + level * 16) + 'px';
+                    item.innerHTML = `<i class="fas fa-folder" style="color:#faad14;"></i> ${node.name}`;
+                    item.onclick = (e) => { e.stopPropagation(); document.getElementById('orgParentId').value = node.id; document.getElementById('selectedParentOrgText').textContent = node.name; dropdown.classList.remove('show'); };
+                    dropdown.appendChild(item);
+                    if (node.children) renderOptions(node.children, level + 1);
+                });
+            }
+            renderOptions(orgData);
+        }
+
+        function toggleParentOrgDropdown(e) {
+            e.stopPropagation();
+            document.getElementById('parentOrgDropdown').classList.toggle('show');
+        }
+
+        // ==================== 模态框 ====================
+        function closeModal(modalId) { document.getElementById(modalId).classList.remove('show'); }
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('show'); });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>人员管理</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: #f5f7fa; color: #333; height: 100vh; overflow: hidden;
+        }
+
+        /* 顶部导航 */
+        .header {
+            height: 56px; background: #fff; border-bottom: 1px solid #e8e8e8;
+            display: flex; align-items: center; padding: 0 24px; justify-content: space-between;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .header-left h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
+        .nav-tabs { display: flex; gap: 4px; margin-left: 32px; }
+        .nav-tab {
+            padding: 8px 20px; border-radius: 6px; font-size: 14px; cursor: pointer;
+            border: none; background: transparent; color: #666; transition: all 0.2s;
+            text-decoration: none; display: flex; align-items: center; gap: 6px;
+        }
+        .nav-tab:hover { background: #f5f7fa; color: #1890ff; }
+        .nav-tab.active { background: #e6f7ff; color: #1890ff; font-weight: 500; }
+
+        /* 主体 */
+        .main-container { display: flex; height: calc(100vh - 56px); }
+
+        /* 左侧组织树（筛选用） */
+        .sidebar {
+            width: 260px; background: #fff; border-right: 1px solid #e8e8e8;
+            display: flex; flex-direction: column; flex-shrink: 0;
+        }
+        .sidebar-header { padding: 16px; border-bottom: 1px solid #f0f0f0; }
+        .sidebar-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .sidebar-title h3 { font-size: 14px; font-weight: 600; color: #333; }
+        .sidebar-actions { display: flex; gap: 4px; }
+        .icon-btn {
+            width: 28px; height: 28px; border: none; background: transparent; border-radius: 4px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            color: #666; transition: all 0.2s; font-size: 12px;
+        }
+        .icon-btn:hover { background: #f0f0f0; color: #1890ff; }
+        .search-box { position: relative; }
+        .search-box input {
+            width: 100%; padding: 8px 12px 8px 32px; border: 1px solid #d9d9d9;
+            border-radius: 6px; font-size: 13px; outline: none; transition: all 0.2s;
+        }
+        .search-box input:focus { border-color: #1890ff; box-shadow: 0 0 0 2px rgba(24,144,255,0.1); }
+        .search-box i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #999; font-size: 12px; }
+        .tree-container { flex: 1; overflow-y: auto; padding: 8px 0; }
+        .tree-container::-webkit-scrollbar { width: 6px; }
+        .tree-container::-webkit-scrollbar-thumb { background: #d9d9d9; border-radius: 3px; }
+
+        /* 树节点 */
+        .tree-node { user-select: none; }
+        .tree-node-content {
+            display: flex; align-items: center; padding: 8px 16px; cursor: pointer;
+            transition: all 0.2s; position: relative; border-radius: 6px; margin: 0 8px;
+        }
+        .tree-node-content:hover { background: #f5f7fa; }
+        .tree-node-content.active { background: #e6f7ff; color: #1890ff; }
+        .tree-node-content.active .node-icon { color: #1890ff; }
+        .tree-toggle {
+            width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;
+            margin-right: 4px; cursor: pointer; color: #999; font-size: 10px;
+            transition: transform 0.2s; flex-shrink: 0;
+        }
+        .tree-toggle.expanded { transform: rotate(90deg); }
+        .tree-toggle.leaf { visibility: hidden; }
+        .node-icon { margin-right: 8px; color: #faad14; font-size: 14px; flex-shrink: 0; }
+        .node-icon.department { color: #52c41a; }
+        .node-icon.team { color: #722ed1; }
+        .node-text { font-size: 13px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .node-count {
+            font-size: 11px; color: #999; background: #f5f5f5; padding: 1px 6px;
+            border-radius: 10px; margin-left: 4px; flex-shrink: 0;
+        }
+        .tree-children { padding-left: 12px; animation: fadeIn 0.2s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 右侧内容 */
+        .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .content-header {
+            background: #fff; padding: 16px 24px; border-bottom: 1px solid #f0f0f0;
+        }
+        .content-header-top {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+        }
+        .content-title { display: flex; align-items: center; gap: 12px; }
+        .content-title h2 { font-size: 16px; font-weight: 600; }
+        .content-title .tag {
+            font-size: 12px; padding: 2px 10px; border-radius: 4px; background: #e6f7ff; color: #1890ff;
+        }
+        .content-actions { display: flex; gap: 8px; }
+        .btn {
+            padding: 6px 16px; border-radius: 6px; font-size: 13px; cursor: pointer;
+            border: 1px solid #d9d9d9; background: #fff; color: #333;
+            display: flex; align-items: center; gap: 6px; transition: all 0.2s;
+        }
+        .btn:hover { border-color: #1890ff; color: #1890ff; }
+        .btn-primary { background: #1890ff; border-color: #1890ff; color: #fff; }
+        .btn-primary:hover { background: #40a9ff; border-color: #40a9ff; color: #fff; }
+        .btn-danger { background: #ff4d4f; border-color: #ff4d4f; color: #fff; }
+        .btn-danger:hover { background: #ff7875; border-color: #ff7875; color: #fff; }
+
+        .toolbar { display: flex; justify-content: space-between; align-items: center; }
+        .toolbar-left { display: flex; gap: 8px; align-items: center; }
+        .toolbar-right { display: flex; gap: 8px; align-items: center; }
+        .filter-group { display: flex; gap: 8px; }
+        .filter-select {
+            padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 6px;
+            font-size: 13px; outline: none; background: #fff; cursor: pointer;
+        }
+        .filter-select:focus { border-color: #1890ff; }
+
+        /* 批量操作栏 */
+        .batch-bar {
+            display: none; align-items: center; gap: 12px; padding: 8px 16px;
+            background: #e6f7ff; border-radius: 6px; margin-bottom: 12px; font-size: 13px;
+        }
+        .batch-bar.show { display: flex; }
+        .batch-bar span { color: #1890ff; font-weight: 500; }
+
+        /* 表格 */
+        .table-container { flex: 1; overflow: auto; padding: 0 24px; }
+        table {
+            width: 100%; border-collapse: collapse; background: #fff; margin-top: 16px;
+            border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        }
+        thead { background: #fafafa; position: sticky; top: 0; z-index: 10; }
+        th {
+            padding: 12px 16px; text-align: left; font-size: 13px; font-weight: 600;
+            color: #666; border-bottom: 1px solid #f0f0f0; white-space: nowrap;
+        }
+        th .sortable { display: flex; align-items: center; gap: 4px; cursor: pointer; user-select: none; }
+        th .sortable:hover { color: #1890ff; }
+        td { padding: 12px 16px; font-size: 13px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+        tbody tr:hover { background: #fafafa; }
+        tbody tr.selected { background: #e6f7ff; }
+        .checkbox { width: 16px; height: 16px; cursor: pointer; }
+        .avatar {
+            width: 32px; height: 32px; border-radius: 50%; background: #1890ff; color: #fff;
+            display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 500; flex-shrink: 0;
+        }
+        .user-info { display: flex; align-items: center; gap: 10px; }
+        .user-name { font-weight: 500; }
+        .user-id { font-size: 12px; color: #999; }
+        .status-tag {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px 8px; border-radius: 4px; font-size: 12px;
+        }
+        .status-active { background: #f6ffed; color: #52c41a; }
+        .status-inactive { background: #fff2f0; color: #ff4d4f; }
+        .status-leave { background: #fff7e6; color: #fa8c16; }
+        .role-tag {
+            display: inline-flex; align-items: center; padding: 2px 8px;
+            border-radius: 4px; font-size: 12px; background: #f0f0f0; color: #666;
+        }
+        .role-admin { background: #fff2e8; color: #fa541c; }
+        .role-manager { background: #e6f7ff; color: #1890ff; }
+        .table-actions { display: flex; gap: 8px; }
+        .table-actions .icon-btn { width: 24px; height: 24px; }
+
+        /* 分页 */
+        .pagination {
+            display: flex; justify-content: flex-end; align-items: center;
+            padding: 16px 24px; gap: 8px; background: #fff; border-top: 1px solid #f0f0f0;
+        }
+        .pagination-info { font-size: 13px; color: #666; margin-right: 8px; }
+        .page-btn {
+            min-width: 32px; height: 32px; padding: 0 8px; border: 1px solid #d9d9d9;
+            background: #fff; border-radius: 6px; cursor: pointer; font-size: 13px;
+            display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+        }
+        .page-btn:hover:not(:disabled) { border-color: #1890ff; color: #1890ff; }
+        .page-btn.active { background: #1890ff; border-color: #1890ff; color: #fff; }
+        .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .page-size {
+            padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 6px;
+            font-size: 13px; outline: none; background: #fff; cursor: pointer; margin-left: 8px;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 80px 24px; color: #999;
+        }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d9d9d9; }
+        .empty-state p { font-size: 14px; }
+
+        /* 模态框 */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center;
+            z-index: 2000; opacity: 0; visibility: hidden; transition: all 0.3s;
+        }
+        .modal-overlay.show { opacity: 1; visibility: visible; }
+        .modal {
+            background: #fff; border-radius: 12px; width: 560px; max-width: 90vw;
+            max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;
+            transform: scale(0.95); transition: transform 0.3s;
+        }
+        .modal-overlay.show .modal { transform: scale(1); }
+        .modal-header {
+            padding: 20px 24px; border-bottom: 1px solid #f0f0f0;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .modal-header h3 { font-size: 16px; font-weight: 600; }
+        .modal-close {
+            width: 32px; height: 32px; border: none; background: transparent; border-radius: 6px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            color: #999; transition: all 0.2s;
+        }
+        .modal-close:hover { background: #f5f5f5; color: #333; }
+        .modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
+        .form-group { margin-bottom: 16px; }
+        .form-group:last-child { margin-bottom: 0; }
+        .form-label { display: block; font-size: 13px; font-weight: 500; color: #333; margin-bottom: 6px; }
+        .form-label .required { color: #ff4d4f; margin-left: 2px; }
+        .form-input, .form-select, .form-textarea {
+            width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 6px;
+            font-size: 13px; outline: none; transition: all 0.2s; font-family: inherit;
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            border-color: #1890ff; box-shadow: 0 0 0 2px rgba(24,144,255,0.1);
+        }
+        .form-textarea { resize: vertical; min-height: 80px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid #f0f0f0; display: flex; justify-content: flex-end; gap: 8px; }
+
+        /* 组织选择器 */
+        .org-selector { position: relative; }
+        .org-selector-trigger {
+            width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 6px;
+            font-size: 13px; cursor: pointer; display: flex; justify-content: space-between;
+            align-items: center; background: #fff;
+        }
+        .org-selector-trigger:hover { border-color: #1890ff; }
+        .org-selector-dropdown {
+            position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px;
+            background: #fff; border: 1px solid #e8e8e8; border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-height: 280px; overflow-y: auto;
+            z-index: 100; display: none;
+        }
+        .org-selector-dropdown.show { display: block; }
+        .org-selector-item {
+            padding: 8px 12px; cursor: pointer; font-size: 13px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .org-selector-item:hover { background: #f5f7fa; }
+        .org-selector-item.selected { background: #e6f7ff; color: #1890ff; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-left">
+            <i class="fas fa-sitemap" style="color: #1890ff; font-size: 20px;"></i>
+            <h1>组织人员系统</h1>
+            <div class="nav-tabs">
+                <a href="org-management.html" class="nav-tab">
+                    <i class="fas fa-folder-tree"></i> 组织管理
+                </a>
+                <a href="personnel-management.html" class="nav-tab active">
+                    <i class="fas fa-users"></i> 人员管理
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- 左侧组织树（筛选用） -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">
+                    <h3>按组织筛选</h3>
+                    <div class="sidebar-actions">
+                        <button class="icon-btn" title="展开全部" onclick="expandAll()">
+                            <i class="fas fa-expand-alt"></i>
+                        </button>
+                        <button class="icon-btn" title="折叠全部" onclick="collapseAll()">
+                            <i class="fas fa-compress-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="搜索组织..." id="orgSearch" oninput="searchOrg(this.value)">
+                </div>
+            </div>
+            <div class="tree-container" id="treeContainer"></div>
+        </aside>
+
+        <!-- 右侧人员列表 -->
+        <main class="content">
+            <div class="content-header">
+                <div class="content-header-top">
+                    <div class="content-title">
+                        <h2 id="currentOrgName">全部人员</h2>
+                        <span class="tag" id="currentOrgTag">共 24 人</span>
+                    </div>
+                    <div class="content-actions">
+                        <button class="btn" onclick="exportData()">
+                            <i class="fas fa-download"></i> 导出
+                        </button>
+                        <button class="btn btn-primary" onclick="showPersonModal()">
+                            <i class="fas fa-plus"></i> 添加人员
+                        </button>
+                    </div>
+                </div>
+
+                <div class="batch-bar" id="batchBar">
+                    <span>已选择 <b id="batchCount">0</b> 项</span>
+                    <button class="btn" onclick="batchMove()">
+                        <i class="fas fa-arrows-alt"></i> 批量调动
+                    </button>
+                    <button class="btn btn-danger" onclick="batchDelete()">
+                        <i class="fas fa-trash-alt"></i> 批量删除
+                    </button>
+                    <button class="btn" onclick="clearSelection()">
+                        <i class="fas fa-times"></i> 取消
+                    </button>
+                </div>
+
+                <div class="toolbar">
+                    <div class="toolbar-left">
+                        <div class="search-box" style="width: 240px;">
+                            <i class="fas fa-search"></i>
+                            <input type="text" placeholder="搜索姓名、工号、手机号..." id="personSearch" oninput="searchPerson(this.value)">
+                        </div>
+                        <div class="filter-group">
+                            <select class="filter-select" id="statusFilter" onchange="filterPersons()">
+                                <option value="">全部状态</option>
+                                <option value="active">在职</option>
+                                <option value="inactive">离职</option>
+                                <option value="leave">休假</option>
+                            </select>
+                            <select class="filter-select" id="roleFilter" onchange="filterPersons()">
+                                <option value="">全部角色</option>
+                                <option value="admin">管理员</option>
+                                <option value="manager">部门负责人</option>
+                                <option value="member">普通成员</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="toolbar-right">
+                        <button class="icon-btn" title="刷新" onclick="refreshData()">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">
+                                <input type="checkbox" class="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                            </th>
+                            <th style="width: 200px;">
+                                <div class="sortable" onclick="sortBy('name')">
+                                    姓名 <i class="fas fa-sort" id="sort-name"></i>
+                                </div>
+                            </th>
+                            <th>工号</th>
+                            <th>部门</th>
+                            <th>职位</th>
+                            <th>角色</th>
+                            <th>手机号</th>
+                            <th>
+                                <div class="sortable" onclick="sortBy('status')">
+                                    状态 <i class="fas fa-sort" id="sort-status"></i>
+                                </div>
+                            </th>
+                            <th style="width: 100px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="personTableBody"></tbody>
+                </table>
+                <div class="empty-state" id="emptyState" style="display: none;">
+                    <i class="fas fa-users"></i>
+                    <p>暂无人员数据</p>
+                </div>
+            </div>
+
+            <div class="pagination">
+                <span class="pagination-info">共 <span id="totalCount">0</span> 条</span>
+                <button class="page-btn" onclick="goPage(1)" id="firstPage">
+                    <i class="fas fa-angle-double-left"></i>
+                </button>
+                <button class="page-btn" onclick="prevPage()" id="prevPage">
+                    <i class="fas fa-angle-left"></i>
+                </button>
+                <div id="pageNumbers"></div>
+                <button class="page-btn" onclick="nextPage()" id="nextPage">
+                    <i class="fas fa-angle-right"></i>
+                </button>
+                <button class="page-btn" onclick="goPage(totalPages)" id="lastPage">
+                    <i class="fas fa-angle-double-right"></i>
+                </button>
+                <select class="page-size" id="pageSize" onchange="changePageSize()">
+                    <option value="10">10条/页</option>
+                    <option value="20">20条/页</option>
+                    <option value="50">50条/页</option>
+                </select>
+            </div>
+        </main>
+    </div>
+
+    <!-- 人员模态框 -->
+    <div class="modal-overlay" id="personModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="personModalTitle">添加人员</h3>
+                <button class="modal-close" onclick="closeModal('personModal')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="personForm">
+                    <input type="hidden" id="personId">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">姓名 <span class="required">*</span></label>
+                            <input type="text" class="form-input" id="personName" placeholder="请输入姓名" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">工号 <span class="required">*</span></label>
+                            <input type="text" class="form-input" id="personCode" placeholder="请输入工号" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">手机号 <span class="required">*</span></label>
+                            <input type="tel" class="form-input" id="personPhone" placeholder="请输入手机号" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">邮箱</label>
+                            <input type="email" class="form-input" id="personEmail" placeholder="请输入邮箱">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">所属组织 <span class="required">*</span></label>
+                            <div class="org-selector">
+                                <div class="org-selector-trigger" onclick="toggleOrgDropdown(event)">
+                                    <span id="selectedOrgText">请选择所属组织</span>
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                                <div class="org-selector-dropdown" id="orgDropdown"></div>
+                            </div>
+                            <input type="hidden" id="personOrgId">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">职位</label>
+                            <input type="text" class="form-input" id="personPosition" placeholder="请输入职位">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">角色</label>
+                            <select class="form-select" id="personRole">
+                                <option value="member">普通成员</option>
+                                <option value="manager">部门负责人</option>
+                                <option value="admin">管理员</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">状态</label>
+                            <select class="form-select" id="personStatus">
+                                <option value="active">在职</option>
+                                <option value="leave">休假</option>
+                                <option value="inactive">离职</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">备注</label>
+                        <textarea class="form-textarea" id="personRemark" placeholder="请输入备注信息"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('personModal')">取消</button>
+                <button class="btn btn-primary" onclick="savePerson()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 批量调动模态框 -->
+    <div class="modal-overlay" id="moveModal">
+        <div class="modal" style="width: 480px;">
+            <div class="modal-header">
+                <h3>批量调动</h3>
+                <button class="modal-close" onclick="closeModal('moveModal')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 16px; font-size: 13px; color: #666;">
+                    已选择 <b id="moveCount">0</b> 人，请选择目标组织：
+                </p>
+                <div class="form-group">
+                    <label class="form-label">目标组织 <span class="required">*</span></label>
+                    <div class="org-selector">
+                        <div class="org-selector-trigger" onclick="toggleMoveOrgDropdown(event)">
+                            <span id="selectedMoveOrgText">请选择目标组织</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="org-selector-dropdown" id="moveOrgDropdown"></div>
+                    </div>
+                    <input type="hidden" id="moveOrgId">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('moveModal')">取消</button>
+                <button class="btn btn-primary" onclick="confirmMove()">确认调动</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 数据 ====================
+        let orgData = [
+            {
+                id: '1', name: '科技有限公司', type: 'company', parentId: null, sort: 1, remark: '总部', createdAt: '2023-01-15',
+                children: [
+                    {
+                        id: '11', name: '研发中心', type: 'department', parentId: '1', sort: 1, remark: '负责产品研发', createdAt: '2023-01-20',
+                        children: [
+                            { id: '111', name: '前端开发组', type: 'team', parentId: '11', sort: 1, remark: 'Web/App前端', createdAt: '2023-02-01', children: [] },
+                            { id: '112', name: '后端开发组', type: 'team', parentId: '11', sort: 2, remark: '服务端开发', createdAt: '2023-02-01', children: [] },
+                            { id: '113', name: '测试组', type: 'team', parentId: '11', sort: 3, remark: '质量保障', createdAt: '2023-02-01', children: [] }
+                        ]
+                    },
+                    {
+                        id: '12', name: '产品中心', type: 'department', parentId: '1', sort: 2, remark: '产品规划与设计', createdAt: '2023-01-20',
+                        children: [
+                            { id: '121', name: '产品设计组', type: 'team', parentId: '12', sort: 1, remark: 'UI/UX设计', createdAt: '2023-02-10', children: [] },
+                            { id: '122', name: '用户研究组', type: 'team', parentId: '12', sort: 2, remark: '用户调研', createdAt: '2023-02-10', children: [] }
+                        ]
+                    },
+                    {
+                        id: '13', name: '运营中心', type: 'department', parentId: '1', sort: 3, remark: '市场运营', createdAt: '2023-01-20',
+                        children: [
+                            { id: '131', name: '市场推广组', type: 'team', parentId: '13', sort: 1, remark: '品牌推广', createdAt: '2023-02-15', children: [] },
+                            { id: '132', name: '客户服务组', type: 'team', parentId: '13', sort: 2, remark: '客户支持', createdAt: '2023-02-15', children: [] }
+                        ]
+                    },
+                    { id: '14', name: '人力资源部', type: 'department', parentId: '1', sort: 4, remark: '人事管理', createdAt: '2023-01-25', children: [] },
+                    { id: '15', name: '财务部', type: 'department', parentId: '1', sort: 5, remark: '财务管理', createdAt: '2023-01-25', children: [] }
+                ]
+            }
+        ];
+
+        let personData = [
+            { id: 'p1', name: '张三', code: 'EMP001', orgId: '1', position: '总经理', role: 'admin', phone: '13800138001', email: 'zhangsan@company.com', status: 'active', remark: '' },
+            { id: 'p2', name: '李四', code: 'EMP002', orgId: '11', position: '研发总监', role: 'manager', phone: '13800138002', email: 'lisi@company.com', status: 'active', remark: '' },
+            { id: 'p3', name: '王五', code: 'EMP003', orgId: '111', position: '高级前端工程师', role: 'member', phone: '13800138003', email: 'wangwu@company.com', status: 'active', remark: '' },
+            { id: 'p4', name: '赵六', code: 'EMP004', orgId: '111', position: '前端工程师', role: 'member', phone: '13800138004', email: 'zhaoliu@company.com', status: 'active', remark: '' },
+            { id: 'p5', name: '孙七', code: 'EMP005', orgId: '112', position: '后端架构师', role: 'member', phone: '13800138005', email: 'sunqi@company.com', status: 'active', remark: '' },
+            { id: 'p6', name: '周八', code: 'EMP006', orgId: '112', position: '后端工程师', role: 'member', phone: '13800138006', email: 'zhouba@company.com', status: 'leave', remark: '年假' },
+            { id: 'p7', name: '吴九', code: 'EMP007', orgId: '113', position: '测试工程师', role: 'member', phone: '13800138007', email: 'wujiu@company.com', status: 'active', remark: '' },
+            { id: 'p8', name: '郑十', code: 'EMP008', orgId: '12', position: '产品总监', role: 'manager', phone: '13800138008', email: 'zhengshi@company.com', status: 'active', remark: '' },
+            { id: 'p9', name: '钱十一', code: 'EMP009', orgId: '121', position: 'UI设计师', role: 'member', phone: '13800138009', email: 'qian11@company.com', status: 'active', remark: '' },
+            { id: 'p10', name: '冯十二', code: 'EMP010', orgId: '122', position: '用户研究员', role: 'member', phone: '13800138010', email: 'feng12@company.com', status: 'active', remark: '' },
+            { id: 'p11', name: '陈十三', code: 'EMP011', orgId: '13', position: '运营总监', role: 'manager', phone: '13800138011', email: 'chen13@company.com', status: 'active', remark: '' },
+            { id: 'p12', name: '褚十四', code: 'EMP012', orgId: '131', position: '市场专员', role: 'member', phone: '13800138012', email: 'chu14@company.com', status: 'inactive', remark: '已离职' },
+            { id: 'p13', name: '卫十五', code: 'EMP013', orgId: '132', position: '客服主管', role: 'member', phone: '13800138013', email: 'wei15@company.com', status: 'active', remark: '' },
+            { id: 'p14', name: '蒋十六', code: 'EMP014', orgId: '14', position: 'HR经理', role: 'manager', phone: '13800138014', email: 'jiang16@company.com', status: 'active', remark: '' },
+            { id: 'p15', name: '沈十七', code: 'EMP015', orgId: '14', position: '招聘专员', role: 'member', phone: '13800138015', email: 'shen17@company.com', status: 'active', remark: '' },
+            { id: 'p16', name: '韩十八', code: 'EMP016', orgId: '15', position: '财务经理', role: 'manager', phone: '13800138016', email: 'han18@company.com', status: 'active', remark: '' },
+            { id: 'p17', name: '杨十九', code: 'EMP017', orgId: '15', position: '会计', role: 'member', phone: '13800138017', email: 'yang19@company.com', status: 'active', remark: '' },
+            { id: 'p18', name: '朱二十', code: 'EMP018', orgId: '111', position: '前端实习生', role: 'member', phone: '13800138018', email: 'zhu20@company.com', status: 'active', remark: '' },
+            { id: 'p19', name: '秦二十一', code: 'EMP019', orgId: '112', position: '后端工程师', role: 'member', phone: '13800138019', email: 'qin21@company.com', status: 'active', remark: '' },
+            { id: 'p20', name: '尤二十二', code: 'EMP020', orgId: '113', position: '自动化测试', role: 'member', phone: '13800138020', email: 'you22@company.com', status: 'leave', remark: '病假' },
+            { id: 'p21', name: '许二十三', code: 'EMP021', orgId: '121', position: '交互设计师', role: 'member', phone: '13800138021', email: 'xu23@company.com', status: 'active', remark: '' },
+            { id: 'p22', name: '何二十四', code: 'EMP022', orgId: '131', position: '市场经理', role: 'member', phone: '13800138022', email: 'he24@company.com', status: 'active', remark: '' },
+            { id: 'p23', name: '吕二十五', code: 'EMP023', orgId: '132', position: '客服专员', role: 'member', phone: '13800138023', email: 'lv25@company.com', status: 'active', remark: '' },
+            { id: 'p24', name: '施二十六', code: 'EMP024', orgId: '1', position: '行政助理', role: 'member', phone: '13800138024', email: 'shi26@company.com', status: 'active', remark: '' }
+        ];
+
+        // ==================== 状态 ====================
+        let currentOrgId = null;
+        let expandedNodes = new Set(['1', '11', '12', '13']);
+        let selectedPersons = new Set();
+        let currentPage = 1;
+        let pageSize = 10;
+        let totalPages = 1;
+        let sortField = null;
+        let sortOrder = 'asc';
+
+        // ==================== 初始化 ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            renderTree();
+            renderPersons();
+            document.addEventListener('click', function() {
+                document.getElementById('orgDropdown').classList.remove('show');
+                document.getElementById('moveOrgDropdown').classList.remove('show');
+            });
+        });
+
+        // ==================== 组织树（只读筛选） ====================
+        function renderTree() {
+            const container = document.getElementById('treeContainer');
+            container.innerHTML = '';
+            orgData.forEach(org => {
+                container.appendChild(createTreeNode(org, 0));
+            });
+        }
+
+        function createTreeNode(org, level) {
+            const hasChildren = org.children && org.children.length > 0;
+            const isExpanded = expandedNodes.has(org.id);
+            const isActive = currentOrgId === org.id;
+            const count = getOrgPersonCount(org.id);
+
+            const node = document.createElement('div');
+            node.className = 'tree-node';
+            node.dataset.id = org.id;
+
+            const content = document.createElement('div');
+            content.className = 'tree-node-content' + (isActive ? ' active' : '');
+            content.style.paddingLeft = (16 + level * 16) + 'px';
+            content.onclick = () => selectOrg(org.id);
+
+            const toggle = document.createElement('span');
+            toggle.className = 'tree-toggle' + (hasChildren ? '' : ' leaf') + (isExpanded ? ' expanded' : '');
+            toggle.innerHTML = '<i class="fas fa-chevron-right"></i>';
+            if (hasChildren) {
+                toggle.onclick = (e) => { e.stopPropagation(); toggleNode(org.id); };
+            }
+
+            const iconClass = org.type === 'company' ? '' : (org.type === 'department' ? ' department' : ' team');
+            const icon = org.type === 'company' ? 'fa-building' : (org.type === 'department' ? 'fa-folder' : 'fa-users');
+
+            content.innerHTML = `
+                ${toggle.outerHTML}
+                <i class="fas ${icon} node-icon${iconClass}"></i>
+                <span class="node-text">${org.name}</span>
+                <span class="node-count">${count}</span>
+            `;
+
+            const toggleEl = content.querySelector('.tree-toggle');
+            if (hasChildren) {
+                toggleEl.onclick = (e) => { e.stopPropagation(); toggleNode(org.id); };
+            }
+
+            node.appendChild(content);
+
+            if (hasChildren && isExpanded) {
+                const children = document.createElement('div');
+                children.className = 'tree-children';
+                org.children.forEach(child => {
+                    children.appendChild(createTreeNode(child, level + 1));
+                });
+                node.appendChild(children);
+            }
+
+            return node;
+        }
+
+        function toggleNode(orgId) {
+            if (expandedNodes.has(orgId)) expandedNodes.delete(orgId);
+            else expandedNodes.add(orgId);
+            renderTree();
+        }
+
+        function expandAll() {
+            function addAll(node) { expandedNodes.add(node.id); if (node.children) node.children.forEach(addAll); }
+            orgData.forEach(addAll);
+            renderTree();
+        }
+
+        function collapseAll() {
+            expandedNodes.clear();
+            renderTree();
+        }
+
+        function selectOrg(orgId) {
+            currentOrgId = orgId;
+            currentPage = 1;
+            selectedPersons.clear();
+            updateBatchBar();
+            renderTree();
+            renderPersons();
+            updateTitle();
+        }
+
+        function updateTitle() {
+            if (!currentOrgId) {
+                document.getElementById('currentOrgName').textContent = '全部人员';
+                document.getElementById('currentOrgTag').textContent = `共 ${personData.length} 人`;
+                return;
+            }
+            const org = findOrg(currentOrgId);
+            if (org) {
+                document.getElementById('currentOrgName').textContent = org.name;
+                const count = getOrgPersonCount(org.id);
+                document.getElementById('currentOrgTag').textContent = `共 ${count} 人`;
+            }
+        }
+
+        // ==================== 工具函数 ====================
+        function findOrg(id, nodes) {
+            nodes = nodes || orgData;
+            for (const node of nodes) {
+                if (node.id === id) return node;
+                if (node.children) { const found = findOrg(id, node.children); if (found) return found; }
+            }
+            return null;
+        }
+
+        function getOrgPersonCount(orgId) {
+            const org = findOrg(orgId);
+            if (!org) return 0;
+            let count = personData.filter(p => p.orgId === orgId).length;
+            if (org.children) org.children.forEach(child => { count += getOrgPersonCount(child.id); });
+            return count;
+        }
+
+        function getAllOrgIds(org) {
+            let ids = [org.id];
+            if (org.children) org.children.forEach(child => { ids = ids.concat(getAllOrgIds(child)); });
+            return ids;
+        }
+
+        // ==================== 人员表格 ====================
+        function renderPersons() {
+            let persons = [...personData];
+
+            if (currentOrgId) {
+                const org = findOrg(currentOrgId);
+                if (org) {
+                    const allIds = getAllOrgIds(org);
+                    persons = persons.filter(p => allIds.includes(p.orgId));
+                }
+            }
+
+            const searchText = document.getElementById('personSearch').value.trim().toLowerCase();
+            if (searchText) {
+                persons = persons.filter(p =>
+                    p.name.toLowerCase().includes(searchText) ||
+                    p.code.toLowerCase().includes(searchText) ||
+                    p.phone.includes(searchText)
+                );
+            }
+
+            const statusFilter = document.getElementById('statusFilter').value;
+            if (statusFilter) persons = persons.filter(p => p.status === statusFilter);
+
+            const roleFilter = document.getElementById('roleFilter').value;
+            if (roleFilter) persons = persons.filter(p => p.role === roleFilter);
+
+            if (sortField) {
+                persons.sort((a, b) => {
+                    let va = a[sortField], vb = b[sortField];
+                    return sortOrder === 'asc' ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1);
+                });
+            }
+
+            const total = persons.length;
+            totalPages = Math.ceil(total / pageSize) || 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            const start = (currentPage - 1) * pageSize;
+            const pagePersons = persons.slice(start, start + pageSize);
+
+            document.getElementById('totalCount').textContent = total;
+
+            const tbody = document.getElementById('personTableBody');
+            const emptyState = document.getElementById('emptyState');
+
+            if (pagePersons.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.style.display = 'flex';
+            } else {
+                emptyState.style.display = 'none';
+                tbody.innerHTML = pagePersons.map(person => {
+                    const org = findOrg(person.orgId);
+                    const orgName = org ? org.name : '-';
+                    const statusMap = {
+                        active: { text: '在职', class: 'status-active', icon: 'fa-check-circle' },
+                        inactive: { text: '离职', class: 'status-inactive', icon: 'fa-times-circle' },
+                        leave: { text: '休假', class: 'status-leave', icon: 'fa-clock' }
+                    };
+                    const status = statusMap[person.status];
+                    const roleMap = {
+                        admin: { text: '管理员', class: 'role-admin' },
+                        manager: { text: '负责人', class: 'role-manager' },
+                        member: { text: '成员', class: '' }
+                    };
+                    const role = roleMap[person.role];
+                    const isSelected = selectedPersons.has(person.id);
+
+                    return `
+                        <tr class="${isSelected ? 'selected' : ''}" data-id="${person.id}">
+                            <td><input type="checkbox" class="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleSelect('${person.id}')"></td>
+                            <td>
+                                <div class="user-info">
+                                    <div class="avatar">${person.name.charAt(0)}</div>
+                                    <div>
+                                        <div class="user-name">${person.name}</div>
+                                        <div class="user-id">${person.code}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>${person.code}</td>
+                            <td>${orgName}</td>
+                            <td>${person.position || '-'}</td>
+                            <td><span class="role-tag ${role.class}">${role.text}</span></td>
+                            <td>${person.phone}</td>
+                            <td><span class="status-tag ${status.class}"><i class="fas ${status.icon}"></i> ${status.text}</span></td>
+                            <td>
+                                <div class="table-actions">
+                                    <button class="icon-btn" title="编辑" onclick="editPerson('${person.id}')"><i class="fas fa-edit"></i></button>
+                                    <button class="icon-btn" title="删除" onclick="deletePerson('${person.id}')"><i class="fas fa-trash-alt" style="color: #ff4d4f;"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            renderPagination();
+            updateSelectAllState();
+        }
+
+        function renderPagination() {
+            const container = document.getElementById('pageNumbers');
+            let html = '';
+            const maxVisible = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+            if (endPage - startPage < maxVisible - 1) startPage = Math.max(1, endPage - maxVisible + 1);
+
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`;
+            }
+            container.innerHTML = html;
+
+            document.getElementById('firstPage').disabled = currentPage === 1;
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = currentPage === totalPages;
+            document.getElementById('lastPage').disabled = currentPage === totalPages;
+        }
+
+        function goPage(page) { currentPage = page; renderPersons(); }
+        function prevPage() { if (currentPage > 1) { currentPage--; renderPersons(); } }
+        function nextPage() { if (currentPage < totalPages) { currentPage++; renderPersons(); } }
+        function changePageSize() { pageSize = parseInt(document.getElementById('pageSize').value); currentPage = 1; renderPersons(); }
+
+        function sortBy(field) {
+            if (sortField === field) sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+            else { sortField = field; sortOrder = 'asc'; }
+            document.querySelectorAll('th .sortable i').forEach(icon => { icon.className = 'fas fa-sort'; });
+            const activeIcon = document.getElementById(`sort-${field}`);
+            if (activeIcon) activeIcon.className = `fas fa-sort-${sortOrder === 'asc' ? 'up' : 'down'}`;
+            renderPersons();
+        }
+
+        function filterPersons() { currentPage = 1; renderPersons(); }
+        function searchPerson(value) { currentPage = 1; renderPersons(); }
+
+        function searchOrg(value) {
+            if (!value.trim()) { renderTree(); return; }
+            const searchLower = value.toLowerCase();
+            const matchedIds = new Set();
+            function searchNodes(nodes) {
+                nodes.forEach(node => {
+                    if (node.name.toLowerCase().includes(searchLower)) {
+                        matchedIds.add(node.id);
+                        let parent = findOrg(node.parentId);
+                        while (parent) { expandedNodes.add(parent.id); parent = findOrg(parent.parentId); }
+                    }
+                    if (node.children) searchNodes(node.children);
+                });
+            }
+            searchNodes(orgData);
+            renderTree();
+            document.querySelectorAll('.tree-node-content').forEach(el => {
+                const nodeId = el.closest('.tree-node').dataset.id;
+                el.style.background = matchedIds.has(nodeId) ? '#fff7e6' : '';
+            });
+        }
+
+        // ==================== 选择功能 ====================
+        function toggleSelect(personId) {
+            if (selectedPersons.has(personId)) selectedPersons.delete(personId);
+            else selectedPersons.add(personId);
+            updateBatchBar();
+            renderPersons();
+        }
+
+        function toggleSelectAll() {
+            const checkbox = document.getElementById('selectAll');
+            const visiblePersons = getVisiblePersons();
+            if (checkbox.checked) visiblePersons.forEach(p => selectedPersons.add(p.id));
+            else visiblePersons.forEach(p => selectedPersons.delete(p.id));
+            updateBatchBar();
+            renderPersons();
+        }
+
+        function updateSelectAllState() {
+            const visiblePersons = getVisiblePersons();
+            const allSelected = visiblePersons.length > 0 && visiblePersons.every(p => selectedPersons.has(p.id));
+            document.getElementById('selectAll').checked = allSelected;
+        }
+
+        function getVisiblePersons() {
+            let persons = [...personData];
+            if (currentOrgId) {
+                const org = findOrg(currentOrgId);
+                if (org) { const allIds = getAllOrgIds(org); persons = persons.filter(p => allIds.includes(p.orgId)); }
+            }
+            const searchText = document.getElementById('personSearch').value.trim().toLowerCase();
+            if (searchText) persons = persons.filter(p => p.name.toLowerCase().includes(searchText) || p.code.toLowerCase().includes(searchText) || p.phone.includes(searchText));
+            const statusFilter = document.getElementById('statusFilter').value;
+            if (statusFilter) persons = persons.filter(p => p.status === statusFilter);
+            const roleFilter = document.getElementById('roleFilter').value;
+            if (roleFilter) persons = persons.filter(p => p.role === roleFilter);
+            const start = (currentPage - 1) * pageSize;
+            return persons.slice(start, start + pageSize);
+        }
+
+        function updateBatchBar() {
+            const bar = document.getElementById('batchBar');
+            const count = selectedPersons.size;
+            document.getElementById('batchCount').textContent = count;
+            if (count > 0) bar.classList.add('show');
+            else bar.classList.remove('show');
+        }
+
+        function clearSelection() { selectedPersons.clear(); updateBatchBar(); renderPersons(); }
+
+        // ==================== 人员CRUD ====================
+        function showPersonModal(personId) {
+            editingPersonId = personId;
+            const modal = document.getElementById('personModal');
+            const title = document.getElementById('personModalTitle');
+            const form = document.getElementById('personForm');
+
+            if (personId) {
+                const person = personData.find(p => p.id === personId);
+                if (!person) return;
+                title.textContent = '编辑人员';
+                document.getElementById('personId').value = person.id;
+                document.getElementById('personName').value = person.name;
+                document.getElementById('personCode').value = person.code;
+                document.getElementById('personPhone').value = person.phone;
+                document.getElementById('personEmail').value = person.email || '';
+                document.getElementById('personPosition').value = person.position || '';
+                document.getElementById('personRole').value = person.role;
+                document.getElementById('personStatus').value = person.status;
+                document.getElementById('personRemark').value = person.remark || '';
+                document.getElementById('personOrgId').value = person.orgId;
+                const org = findOrg(person.orgId);
+                document.getElementById('selectedOrgText').textContent = org ? org.name : '请选择所属组织';
+            } else {
+                title.textContent = '添加人员';
+                form.reset();
+                document.getElementById('personId').value = '';
+                editingPersonId = null;
+                if (currentOrgId) {
+                    const org = findOrg(currentOrgId);
+                    document.getElementById('personOrgId').value = currentOrgId;
+                    document.getElementById('selectedOrgText').textContent = org ? org.name : '请选择所属组织';
+                } else {
+                    document.getElementById('personOrgId').value = '';
+                    document.getElementById('selectedOrgText').textContent = '请选择所属组织';
+                }
+            }
+
+            renderOrgDropdown();
+            modal.classList.add('show');
+        }
+
+        function editPerson(personId) { showPersonModal(personId); }
+
+        function deletePerson(personId) {
+            const person = personData.find(p => p.id === personId);
+            if (!person) return;
+            if (confirm(`确定要删除人员「${person.name}」吗？此操作不可恢复。`)) {
+                personData = personData.filter(p => p.id !== personId);
+                selectedPersons.delete(personId);
+                updateBatchBar();
+                renderPersons();
+                renderTree();
+            }
+        }
+
+        function savePerson() {
+            const name = document.getElementById('personName').value.trim();
+            const code = document.getElementById('personCode').value.trim();
+            const phone = document.getElementById('personPhone').value.trim();
+            const orgId = document.getElementById('personOrgId').value;
+
+            if (!name || !code || !phone || !orgId) { alert('请填写必填项'); return; }
+
+            const person = {
+                id: editingPersonId || 'p' + Date.now(),
+                name, code, phone,
+                email: document.getElementById('personEmail').value.trim(),
+                orgId,
+                position: document.getElementById('personPosition').value.trim(),
+                role: document.getElementById('personRole').value,
+                status: document.getElementById('personStatus').value,
+                remark: document.getElementById('personRemark').value.trim()
+            };
+
+            if (editingPersonId) {
+                const index = personData.findIndex(p => p.id === editingPersonId);
+                if (index !== -1) personData[index] = person;
+            } else {
+                personData.push(person);
+            }
+
+            closeModal('personModal');
+            renderPersons();
+            renderTree();
+        }
+
+        // ==================== 批量操作 ====================
+        function batchMove() {
+            if (selectedPersons.size === 0) return;
+            document.getElementById('moveCount').textContent = selectedPersons.size;
+            document.getElementById('moveOrgId').value = '';
+            document.getElementById('selectedMoveOrgText').textContent = '请选择目标组织';
+            renderMoveOrgDropdown();
+            document.getElementById('moveModal').classList.add('show');
+        }
+
+        function confirmMove() {
+            const targetOrgId = document.getElementById('moveOrgId').value;
+            if (!targetOrgId) { alert('请选择目标组织'); return; }
+            selectedPersons.forEach(personId => {
+                const person = personData.find(p => p.id === personId);
+                if (person) person.orgId = targetOrgId;
+            });
+            closeModal('moveModal');
+            selectedPersons.clear();
+            updateBatchBar();
+            renderPersons();
+            renderTree();
+        }
+
+        function batchDelete() {
+            if (selectedPersons.size === 0) return;
+            if (confirm(`确定要删除选中的 ${selectedPersons.size} 名人员吗？此操作不可恢复。`)) {
+                personData = personData.filter(p => !selectedPersons.has(p.id));
+                selectedPersons.clear();
+                updateBatchBar();
+                renderPersons();
+                renderTree();
+            }
+        }
+
+        // ==================== 组织选择器 ====================
+        function renderOrgDropdown() {
+            const dropdown = document.getElementById('orgDropdown');
+            dropdown.innerHTML = '';
+            function renderOptions(nodes, level) {
+                level = level || 0;
+                nodes.forEach(node => {
+                    const item = document.createElement('div');
+                    item.className = 'org-selector-item';
+                    item.style.paddingLeft = (12 + level * 16) + 'px';
+                    item.innerHTML = `<i class="fas fa-folder" style="color: #faad14;"></i> ${node.name}`;
+                    item.onclick = (e) => { e.stopPropagation(); document.getElementById('personOrgId').value = node.id; document.getElementById('selectedOrgText').textContent = node.name; dropdown.classList.remove('show'); };
+                    dropdown.appendChild(item);
+                    if (node.children) renderOptions(node.children, level + 1);
+                });
+            }
+            renderOptions(orgData);
+        }
+
+        function renderMoveOrgDropdown() {
+            const dropdown = document.getElementById('moveOrgDropdown');
+            dropdown.innerHTML = '';
+            function renderOptions(nodes, level) {
+                level = level || 0;
+                nodes.forEach(node => {
+                    const item = document.createElement('div');
+                    item.className = 'org-selector-item';
+                    item.style.paddingLeft = (12 + level * 16) + 'px';
+                    item.innerHTML = `<i class="fas fa-folder" style="color: #faad14;"></i> ${node.name}`;
+                    item.onclick = (e) => { e.stopPropagation(); document.getElementById('moveOrgId').value = node.id; document.getElementById('selectedMoveOrgText').textContent = node.name; dropdown.classList.remove('show'); };
+                    dropdown.appendChild(item);
+                    if (node.children) renderOptions(node.children, level + 1);
+                });
+            }
+            renderOptions(orgData);
+        }
+
+        function toggleOrgDropdown(e) { e.stopPropagation(); document.getElementById('orgDropdown').classList.toggle('show'); }
+        function toggleMoveOrgDropdown(e) { e.stopPropagation(); document.getElementById('moveOrgDropdown').classList.toggle('show'); }
+
+        // ==================== 模态框 ====================
+        function closeModal(modalId) { document.getElementById(modalId).classList.remove('show'); }
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('show'); });
+        });
+
+        // ==================== 其他功能 ====================
+        function refreshData() { renderPersons(); renderTree(); }
+
+        function exportData() {
+            let persons = [...personData];
+            if (currentOrgId) {
+                const org = findOrg(currentOrgId);
+                if (org) { const allIds = getAllOrgIds(org); persons = persons.filter(p => allIds.includes(p.orgId)); }
+            }
+            const headers = ['姓名', '工号', '部门', '职位', '角色', '手机号', '邮箱', '状态', '备注'];
+            const rows = persons.map(p => {
+                const org = findOrg(p.orgId);
+                const roleMap = { admin: '管理员', manager: '负责人', member: '成员' };
+                const statusMap = { active: '在职', inactive: '离职', leave: '休假' };
+                return [p.name, p.code, org ? org.name : '-', p.position || '-', roleMap[p.role], p.phone, p.email || '-', statusMap[p.status], p.remark || ''];
+            });
+            let csv = '\uFEFF' + headers.join(',') + '\n';
+            rows.forEach(row => { csv += row.map(cell => `"${cell}"`).join(',') + '\n'; });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `人员数据_${new Date().toLocaleDateString()}.csv`;
+            link.click();
+        }
+    </script>
+</body>
+</html>
