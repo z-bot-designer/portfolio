@@ -1,0 +1,46 @@
+# 忽略临时文件和无关文件
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# 日志文件
+*.log
+npm-debug.log*
+
+# 依赖目录
+node_modules/
+
+# 图片搜索结果
+huaban_search_result.png
+
+# 股票分析文件（与本项目无关）
+002475_*.csv
+002475_*.md
+chart_*.txt
+charts_base64.json
+console.log*.js
+report.html
+org-*.html
+personnel-*.html
+*.xlsx
+
+# 压缩包
+*.zip
+*.gz
+*.tar
+
+# 临时文件
+*.tmp
+*.bak
+
+# IDE 配置
+.vscode/
+.idea/
+
+# 测试服务器相关
+server.js
+start.bat
+start.py
+README-本地部署.md
+README-GitHub部署.md
