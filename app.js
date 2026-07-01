@@ -212,7 +212,7 @@ function initParticles() {
         draw() {
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-            ctx.fillStyle = \`rgba(79, 70, 229, \${this.opacity})\`;
+            ctx.fillStyle = `rgba(79, 70, 229, ${this.opacity})`;
             ctx.fill();
         }
     }
@@ -229,7 +229,7 @@ function initParticles() {
                     ctx.beginPath();
                     ctx.moveTo(particles[i].x, particles[i].y);
                     ctx.lineTo(particles[j].x, particles[j].y);
-                    ctx.strokeStyle = \`rgba(79, 70, 229, \${opacity})\`;
+                    ctx.strokeStyle = `rgba(79, 70, 229, ${opacity})`;
                     ctx.lineWidth = 0.5;
                     ctx.stroke();
                 }
